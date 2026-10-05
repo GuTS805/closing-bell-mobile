@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Closing Bell",
+    "slug": "closing-bell-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "closingbell",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.closingbell.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#101413",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+gradle.settingsEvaluated { settings ->
+    def crypto = settings.findProject(':react-native-quick-crypto')
+    if (crypto != null) {
+        crypto.projectDir = new File(settings.settingsDir.parentFile, 'node_modules/react-native-quick-crypto/android')
+    }
+}
