@@ -9,6 +9,7 @@ export const savedCheckSchema = z.object({
   band: z.number().int().positive(),
   deviation: z.number().finite(),
   buildable: z.boolean(),
+  outcome: z.enum(['within', 'above', 'stale', 'unavailable']).optional(),
   capturedAt: z.string(),
   checkedAt: z.string(),
   referenceAge: z.number().finite().nonnegative(),
@@ -16,6 +17,10 @@ export const savedCheckSchema = z.object({
   maxPrice: z.number().finite().positive().optional(),
 });
 export type SavedCheck = z.infer<typeof savedCheckSchema>;
+
+export function savedOutcome(check: SavedCheck) {
+  return check.outcome ?? (check.buildable ? 'within' : 'above');
+}
 
 export function ageSinceCaptureSeconds(capturedAtValue: string, sourceAgeSecs: number, now = Date.now()) {
   const capturedAt = Date.parse(capturedAtValue);

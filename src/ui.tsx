@@ -48,6 +48,7 @@ export const s = StyleSheet.create({
   brand: { color: colors.ink, fontSize: 20, fontFamily: font.display, letterSpacing: -0.8 },
   brandGold: { color: colors.goldBright },
   hero: { paddingVertical: 10, gap: 13 },
+  compactHero: { paddingVertical: 4, gap: 7 },
   heroTitle: { color: colors.ink, fontSize: 41, lineHeight: 44, fontFamily: font.display, letterSpacing: -2 },
   sectionHeading: { color: colors.ink, fontSize: 22, fontFamily: font.display, letterSpacing: -0.8 },
   button: { backgroundColor: colors.ink, borderWidth: 1, borderColor: '#ffe191', paddingHorizontal: 16, paddingVertical: 13, borderRadius: 8, alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row', minHeight: 50 },

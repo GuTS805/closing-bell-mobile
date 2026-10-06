@@ -1,3 +1,4 @@
+param([switch]$ReuseNative)
 $ErrorActionPreference = 'Stop'
 $env:NODE_ENV = 'production'
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -18,8 +19,14 @@ if ($projectRoot.Length -gt 40) {
 }
 Push-Location $buildRoot
 try {
-    & npx expo prebuild --platform android --no-install
-    if ($LASTEXITCODE -ne 0) { throw 'Android generation failed.' }
+    if ($ReuseNative) {
+        if (-not (Test-Path -LiteralPath (Join-Path $buildRoot 'android/gradlew.bat'))) {
+            throw 'No generated Android project exists. Build once without -ReuseNative.'
+        }
+    } else {
+        & npx expo prebuild --platform android --no-install
+        if ($LASTEXITCODE -ne 0) { throw 'Android generation failed.' }
+    }
     Push-Location (Join-Path $buildRoot 'android')
     try {
         $gradleArgs = @(

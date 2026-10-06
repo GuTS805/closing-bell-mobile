@@ -39,6 +39,6 @@ The Windows build script uses a temporary drive mapping for long workspace paths
 
 ## Verified build
 
-Version 0.1.0 compiled successfully on October 5, 2026. APK signature verification passed. Package: `com.closingbell.mobile`; Android 7.0 or newer; ARM64, ARMv7, x86, and x86_64. TypeScript validation and release JavaScript bundling passed. No device or emulator was connected for a launch test.
+Version 0.1.0 compiled successfully on October 6, 2026. APK signature verification, TypeScript validation, and release JavaScript bundling passed. Package: `com.closingbell.mobile`; Android 7.0 or newer; ARM64, ARMv7, x86, and x86_64. The APK was installed and exercised on an Android 16 (API 36) Google APIs emulator at standard and 320 × 640 display sizes. See [emulator QA](docs/emulator-qa.md) for the tested flows and limits.
 
-APK SHA-256: `a0dacc36793456658610b1fe7c66f36028827088d0342787955cc39b676695dd`.
+APK SHA-256: `08b47bb658bf6cfcac0a6b2ce421331831bcf5822e115547e23355210edc711b`.
