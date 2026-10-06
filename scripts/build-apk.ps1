@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+$env:NODE_ENV = 'production'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $buildRoot = $projectRoot
 $mappedDrive = $null

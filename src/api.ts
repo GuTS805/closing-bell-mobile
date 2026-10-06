@@ -12,14 +12,14 @@ export type Ticker = typeof markets[number]['ticker'];
 const finite = z.number().finite();
 export const costSchema = z.object({
   capturedAt: z.string(),
-  oracle: z.object({ price: finite.positive(), ageSecs: finite }),
-  pool: z.object({ fillPrice: finite.positive() }),
+  oracle: z.object({ price: finite.positive(), ageSecs: finite, feed: z.string().optional() }),
+  pool: z.object({ fillPrice: finite.positive(), venues: z.array(z.string()).optional() }),
   breakdown: z.object({ trueCostBps: finite }),
 });
 export const guardSchema = z.object({
   capturedAt: z.string(),
   oracle: z.object({ priceUsd: finite.positive(), ageSecs: finite }),
-  derivation: z.object({ buildable: z.boolean(), quotedDeviationBps: finite, maxPriceUsd: finite.positive() }),
+  derivation: z.object({ buildable: z.boolean(), quotedDeviationBps: finite, maxPriceUsd: finite.positive(), refusal: z.string().optional() }),
 });
 export const positionSchema = z.object({
   capturedAt: z.string(), holdings: z.array(z.object({ ticker: z.string(), label: z.string(), qty: finite })),
@@ -32,9 +32,17 @@ export async function request<T>(path: string, schema: z.ZodType<T>, signal?: Ab
   const timeout = setTimeout(abort, 20_000);
   try {
     const response = await fetch(`${API_URL}${path}`, { signal: controller.signal });
-    const body = await response.json();
-    if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : `Service unavailable (${response.status})`);
-    return schema.parse(body);
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' ? body.error : `Service unavailable (${response.status}).`;
+      throw new Error(message);
+    }
+    const result = schema.safeParse(body);
+    if (!result.success) throw new Error('The quote service returned incomplete data. Please try again.');
+    return result.data;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError' && !signal?.aborted) throw new Error('The quote service took too long. Please try again.');
+    throw error;
   } finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); }
 }
 export const usd = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

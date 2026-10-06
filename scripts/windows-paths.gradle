@@ -1,6 +1,17 @@
 gradle.settingsEvaluated { settings ->
-    def crypto = settings.findProject(':react-native-quick-crypto')
-    if (crypto != null) {
-        crypto.projectDir = new File(settings.settingsDir.parentFile, 'node_modules/react-native-quick-crypto/android')
+    def projectRoot = settings.settingsDir.parentFile
+    if (settings.settingsDir.name != 'android' || projectRoot.name != 'closing-bell-mobile') {
+        return
+    }
+    def pending = [settings.rootProject]
+    while (!pending.isEmpty()) {
+        def descriptor = pending.removeAt(0)
+        def path = descriptor.projectDir.absolutePath.replace('\\', '/')
+        def marker = '/node_modules/'
+        def offset = path.indexOf(marker)
+        if (offset >= 0) {
+            descriptor.projectDir = new File(projectRoot, path.substring(offset + 1))
+        }
+        pending.addAll(descriptor.children)
     }
 }
