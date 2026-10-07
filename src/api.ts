@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const RPC_URL = process.env.EXPO_PUBLIC_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
 const XSTOCKS = 'https://api.xstocks.fi/api/v2/public';
 const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-const TOKEN_2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFh1twvJqtpVQyMi';
+const TOKEN_2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 export const markets = [
   { ticker: 'SPYx', name: 'S&P 500', underlying: 'SPY', mark: 'S', color: '#d4bf83', mint: 'XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W', decimals: 8 },
   { ticker: 'AAPLx', name: 'Apple', underlying: 'AAPL', mark: 'A', color: '#b7c4cf', mint: 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp', decimals: 8 },

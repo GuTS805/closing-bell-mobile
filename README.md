@@ -27,6 +27,6 @@ Wallet identity points to this source repository. A dedicated verified domain wi
 
 ## Verification
 
-TypeScript validation and the Android APK build passed on October 7, 2026. The APK was installed on an Android 16 AOSP emulator at 320 × 640. Market comparison, save and restart persistence, recheck restoration, backing record, and the wallet fallback were verified. No app crash appeared in the AndroidRuntime or ReactNativeJS error log. A successful Mobile Wallet Adapter connection still requires a compatible wallet on a device or emulator.
+TypeScript validation and the Android APK build passed on October 7, 2026. The APK was installed on an Android 16 AOSP emulator at 320 × 640. Market comparison, save and restart persistence, recheck restoration, backing record, and wallet connection, holdings lookup, and disconnect were verified using Solana Mobile's fake wallet. No app crash appeared in the AndroidRuntime or ReactNativeJS error log.
 
-The test APK is `artifacts/closing-bell-0.1.0.apk` (SHA-256 `B84D6DD34FAB3A1EC2DD81FA9646131D9B08E3168035C9F9131C259269658523`). The APK is ignored by Git; build locally from this source. See [emulator QA](docs/emulator-qa.md) for the test record and historical runs.
+The test APK is `artifacts/closing-bell-0.1.0.apk` (SHA-256 `9B62D936D1B66060A0CD7374C814193D581C811186E7B8CF621FB6DF691E477B`). The APK is ignored by Git; build locally from this source. See [emulator QA](docs/emulator-qa.md) for the test record and historical runs.
