@@ -1,4 +1,16 @@
-# Android emulator QA — October 6, 2026
+# Android emulator QA
+
+## October 7 independent app build
+
+Installed the rebuilt APK on an Android 16 AOSP emulator at 320 × 640. The home screen showed the SPYx Jupiter route token price, the xStocks issuer indicative **token** price, their difference, and `AGE UNKNOWN` because the issuer price endpoint gives no publication timestamp. The app identified the network as mainnet.
+
+Checked a $100 SPYx route with a 0.50% limit. The result showed the route price, issuer price, ceiling, difference, and `ABOVE LIMIT`, while explaining that the comparison is indicative and does not execute a trade. Saved the check, force-stopped and relaunched the app, then found it in Checks. `Check SPYx again` restored the prior amount and limit and offered a fresh check.
+
+The Backing tab displayed SPYx shares held, token supply, and a dated issuer record whose age was eight minutes at inspection. The Wallet tab showed Connect wallet and a read-only address lookup when no compatible wallet was installed. No `AndroidRuntime` or `ReactNativeJS` error appeared in the final log check. The AOSP image returned black screenshots, so UI hierarchy and logs were used for this pass. A successful wallet connection and real signed transaction were not tested; this app does not offer a transaction action.
+
+The APK signature verified with `apksigner`; SHA-256: `B84D6DD34FAB3A1EC2DD81FA9646131D9B08E3168035C9F9131C259269658523`. This section supersedes the older Pyth-based flow below.
+
+## October 6, 2026 — previous build
 
 Test device: Android 16 (API 36), Google APIs x86_64 emulator. The release APK was installed and tested at 1080 × 2400 and 320 × 640. Local screenshots are in `artifacts/qa/` (ignored by Git).
 
