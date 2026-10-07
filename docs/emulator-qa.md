@@ -16,6 +16,8 @@ Generated a persistent release signing key. Its APK certificate SHA-256 fingerpr
 
 Installed the release-signed APK on the Android 16 AOSP emulator. Solana Mobile's fake wallet showed `Verification successful` for the domain. Authorized the app, confirmed the address and empty xStocks state, then disconnected. The final APK SHA-256 is `07C42596A51603D01BF275E86C5104FAF7A3A15CC81438A4C59EB3A2A147457D`; `apksigner` confirmed the expected certificate. No app crash appeared in the AndroidRuntime or ReactNativeJS error log. A physical-device test with a production wallet and a funded account is still pending; no transaction flow exists in this app.
 
+Attempted a production-wallet check with Backpack 2.88.0 from its official Android APK download API on a second x86_64 emulator. Backpack itself exited at launch because its APK could not load `libreactnative.so` for that emulator architecture. The available Android SDK images here are x86_64, so this does not test the Closing Bell/Backpack handoff. A physical Android phone is required for that check.
+
 ## October 6, 2026 — previous build
 
 Test device: Android 16 (API 36), Google APIs x86_64 emulator. The release APK was installed and tested at 1080 × 2400 and 320 × 640. Local screenshots are in `artifacts/qa/` (ignored by Git).
