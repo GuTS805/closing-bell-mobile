@@ -21,12 +21,14 @@ npm run android
 
 Use a native development build. Expo Go does not contain the wallet and crypto modules. `EXPO_PUBLIC_RPC_URL` is a public Solana mainnet RPC endpoint; never put a secret in an `EXPO_PUBLIC_` variable.
 
-For a local Windows APK, run `npm run build:apk`. The generated debug key signs this testing build; configure a private release key before store publication. The app bundle makes direct HTTPS requests to Jupiter and xStocks, and neither service requires a key for the endpoints used here. Their availability and usage terms can change.
+For a local Windows test APK, run `npm run build:apk`. That testing build uses a debug key. To build the distributable APK with this project's release certificate, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-apk.ps1 -Release`. The release keystore is stored locally in `.build-cache/release-signing/closing-bell-release.jks`; its password is encrypted for this Windows account in `password.dpapi`. Neither file is committed. Back up the keystore and record its password in your password manager using `scripts/show-release-password.ps1` in a private terminal. Losing the keystore prevents updates under the same app identity.
 
-Wallet identity points to this source repository. A dedicated verified domain with Digital Asset Links is needed for production wallet verification.
+The app bundle makes direct HTTPS requests to Jupiter and xStocks, and neither service requires a key for the endpoints used here. Their availability and usage terms can change.
+
+Wallet identity uses `https://closing-bell-eight.vercel.app` solely for Android Digital Asset Links verification. That host serves `/.well-known/assetlinks.json` with the release certificate fingerprint and exact `application/json` MIME type. Its response is cached at the edge to keep verification fast. Market data and wallet holdings do not call that web backend.
 
 ## Verification
 
-TypeScript validation and the Android APK build passed on October 7, 2026. The APK was installed on an Android 16 AOSP emulator at 320 × 640. Market comparison, save and restart persistence, recheck restoration, backing record, and wallet connection, holdings lookup, and disconnect were verified using Solana Mobile's fake wallet. No app crash appeared in the AndroidRuntime or ReactNativeJS error log.
+TypeScript validation and the Android APK build passed on October 7, 2026. The APK was installed on an Android 16 AOSP emulator at 320 × 640. Market comparison, save and restart persistence, recheck restoration, backing record, and wallet connection, holdings lookup, and disconnect were verified using Solana Mobile's fake wallet. The release APK showed `Verification successful` in that wallet. No app crash appeared in the AndroidRuntime or ReactNativeJS error log. A physical-device test with a production wallet remains to be done.
 
-The test APK is `artifacts/closing-bell-0.1.0.apk` (SHA-256 `9B62D936D1B66060A0CD7374C814193D581C811186E7B8CF621FB6DF691E477B`). The APK is ignored by Git; build locally from this source. See [emulator QA](docs/emulator-qa.md) for the test record and historical runs.
+The release APK is `artifacts/closing-bell-0.1.0-release.apk` (SHA-256 `07C42596A51603D01BF275E86C5104FAF7A3A15CC81438A4C59EB3A2A147457D`). The APK is ignored by Git; build locally from this source. See [emulator QA](docs/emulator-qa.md) for the test record and historical runs.

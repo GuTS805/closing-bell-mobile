@@ -18,7 +18,7 @@ export default function App() {
     return { get: async () => authorization, set: async value => { authorization = value; }, clear: async () => { authorization = undefined; } };
   });
   return <SafeAreaProvider><QueryClientProvider client={client}>
-    <MobileWalletProvider cache={cache} chain="solana:mainnet" endpoint={RPC_URL} identity={{ name: 'Closing Bell', uri: 'https://github.com/GuTS805/closing-bell-mobile' }}>
+    <MobileWalletProvider cache={cache} chain="solana:mainnet" endpoint={RPC_URL} identity={{ name: 'Closing Bell', uri: 'https://closing-bell-eight.vercel.app' }}>
       <StatusBar style="light" /><Shell />
     </MobileWalletProvider>
   </QueryClientProvider></SafeAreaProvider>;
