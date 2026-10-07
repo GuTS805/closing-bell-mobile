@@ -48,7 +48,7 @@ export function Shell() {
     <View style={s.header}><Image source={require('../assets/icon.png')} style={s.logo} resizeMode="contain" /><View style={s.flex}><Text style={s.brand}>Closing <Text style={s.brandGold}>Bell.</Text></Text><Text style={s.faint}>TOKENIZED STOCKS. FULL TRANSPARENCY.</Text></View><Pill title={!stock && tab === 'Proof' ? 'DEVNET' : 'MAINNET'} /></View>
     {stock ? <Stock key={`${stock}:${repeatCheck?.id ?? 'new'}`} ticker={stock} initialCheck={repeatCheck} saved={saved.includes(stock)} toggle={() => toggle(stock)} back={() => setStock(null)} saveCheck={saveCheck} viewChecks={() => { setStock(null); setTab('Checks'); }} /> : <>
       {tab === 'Watch' && <><View style={s.compactHero}><Label>MAINNET PRICE CHECK</Label><Text style={s.sectionHeading}>Know what the token costs.</Text><Copy>Compare its quote with the share beneath it. Old references pause the verdict.</Copy></View><View style={s.row}><View><Label>YOUR MARKET DESK</Label><Text style={s.sectionHeading}>Markets</Text></View><Text style={s.faint}>04 ASSETS</Text></View>
-        {[...markets].sort((a, b) => Number(saved.includes(b.ticker)) - Number(saved.includes(a.ticker))).map(m => <MarketRow key={m.ticker} ticker={m.ticker} saved={saved.includes(m.ticker)} open={() => { setRepeatCheck(null); setStock(m.ticker); }} />)}<Button secondary title="Refresh markets" onPress={() => { void client.invalidateQueries({ queryKey: ['cost'] }); }} />{!ready && <Copy>Restoring watchlist…</Copy>}</>}
+        {[...markets].sort((a, b) => Number(saved.includes(b.ticker)) - Number(saved.includes(a.ticker))).map(m => <MarketRow key={m.ticker} ticker={m.ticker} saved={saved.includes(m.ticker)} lastCheck={checks.find(check => check.ticker === m.ticker)} open={() => { setRepeatCheck(null); setStock(m.ticker); }} />)}<Button secondary title="Refresh markets" onPress={() => { void client.invalidateQueries({ queryKey: ['cost'] }); }} />{!ready && <Copy>Restoring watchlist…</Copy>}</>}
       {tab === 'Portfolio' && <Portfolio />}
       {tab === 'Checks' && <>
         <View style={s.hero}><Label>YOUR HISTORY</Label><Text style={s.title}>Saved checks.</Text><Copy>Past observations on this device. Run a new check before making a decision.</Copy></View>
@@ -68,7 +68,7 @@ export function Shell() {
     </>}
   </ScrollView><View style={s.tabs}>{tabs.map(t => <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: t === tab && !stock }} style={[s.tab, t === tab && !stock && s.activeTab]} onPress={() => { setStock(null); setTab(t); }}><Text style={[s.tabText, t === tab && !stock && s.selected]}>{t}</Text></Pressable>)}</View></SafeAreaView>;
 }
-function MarketRow({ ticker, saved, open }: { ticker: Ticker; saved: boolean; open: () => void }) {
+function MarketRow({ ticker, saved, lastCheck, open }: { ticker: Ticker; saved: boolean; lastCheck?: SavedCheck; open: () => void }) {
   const market = markets.find(m => m.ticker === ticker)!;
   const query = useQuery({ queryKey: ['cost', ticker, 1000], queryFn: ({ signal }) => request(`/api/truecost?ticker=${ticker}&notional=1000`, costSchema, signal) });
   const [now, setNow] = useState(Date.now());
@@ -80,6 +80,7 @@ function MarketRow({ ticker, saved, open }: { ticker: Ticker; saved: boolean; op
     <View style={s.row}><View style={s.flex}><Text style={s.dataHint}>TOKEN QUOTE / $1,000</Text><Text style={s.marketPrice}>{query.data && !query.isError ? usd(query.data.pool.fillPrice) : query.isPending ? 'Reading…' : '—'}</Text></View><Pill title={status} tone={fresh && !query.isError ? 'green' : query.isError ? 'red' : 'gold'} /></View>
     <DataRow label="Underlying share" value={query.data && !query.isError ? usd(query.data.oracle.price) : '—'} hint={query.data ? `Pyth reference · ${ageLabel(ageSinceCaptureSeconds(query.data.capturedAt, query.data.oracle.ageSecs, now))}` : 'Pyth reference'} />
     <DataRow label="Difference" value={fresh && !query.isError ? percent(query.data!.breakdown.trueCostBps) : 'Unavailable'} hint={fresh ? 'Token quote versus share' : 'Requires a fresh equity reference'} accent={fresh} />
+    {lastCheck && <Text style={s.faint}>LAST CHECK {new Date(lastCheck.checkedAt).toLocaleDateString()} · {savedOutcome(lastCheck) === 'stale' ? 'OLD REFERENCE' : savedOutcome(lastCheck) === 'within' ? 'WITHIN LIMIT' : savedOutcome(lastCheck) === 'above' ? 'ABOVE LIMIT' : 'NO ROUTE'}</Text>}
     {query.data && <Text style={s.faint}>PYTH {query.data.oracle.feed ?? 'EQUITY'} · {ageLabel(ageSinceCaptureSeconds(query.data.capturedAt, query.data.oracle.ageSecs, now))}{query.data.pool.venues?.length ? `  /  ${query.data.pool.venues.join(', ')}` : ''}</Text>}
     {query.isError && <Text style={s.faint}>Data unavailable. Open the token to retry.</Text>}
   </Pressable>;
@@ -105,6 +106,7 @@ function Stock({ ticker, initialCheck, saved, toggle, back, saveCheck, viewCheck
     staleTime: 0,
   });
   const result = review && quote.data && !quote.isError && !quote.isFetching ? quoteDecision(quote.data, band, now) : null;
+  const previousComparable = initialCheck && initialCheck.amount === value && initialCheck.band === band && ['within', 'above'].includes(savedOutcome(initialCheck));
   const captureKey = quote.data ? `${ticker}:${value}:${band}:${quote.data.capturedAt}:${quote.data.derivation.quotedDeviationBps}` : '';
   async function save() {
     if (!quote.data || !result || saving) return;
@@ -141,6 +143,10 @@ function Stock({ ticker, initialCheck, saved, toggle, back, saveCheck, viewCheck
       <View style={s.row}><Label>02 / THE VERDICT</Label><Pill title={result === 'within' ? 'WITHIN LIMIT' : result === 'above' ? 'ABOVE LIMIT' : result === 'stale' ? 'OLD REFERENCE' : 'NO ROUTE'} tone={result === 'within' ? 'green' : result === 'above' ? 'red' : 'gold'} /></View>
       <Text style={s.value}>{result === 'stale' ? 'Quote paused' : percent(quote.data.derivation.quotedDeviationBps)}</Text>
       <Copy>{result === 'stale' ? `The reference is over ${MAX_REFERENCE_AGE_SECS / 60} minutes old. Refresh before making a decision.` : result === 'unavailable' ? 'The comparison is inside your limit, but the service could not prepare a route. Try again later.' : result === 'within' ? 'The quoted deviation is within your chosen ceiling.' : 'The quoted deviation exceeds your chosen ceiling.'}</Copy>
+      {initialCheck && <View style={s.notice}><Label>SINCE YOUR SAVED CHECK</Label><Copy>{previousComparable && (result === 'within' || result === 'above')
+        ? `Previous ${percent(initialCheck.deviation)} · now ${percent(quote.data.derivation.quotedDeviationBps)} · ${Math.abs(quote.data.derivation.quotedDeviationBps - initialCheck.deviation).toFixed(0)} bp ${quote.data.derivation.quotedDeviationBps >= initialCheck.deviation ? 'higher' : 'lower'}.`
+        : result === 'stale' ? 'The equity reference is still too old to compare this result with your saved check.'
+        : 'A like-for-like change needs two fresh checks with the same amount and limit.'}</Copy></View>}
       {result !== 'stale' && result !== 'within' && quote.data.derivation.refusal && <Copy>Service reason: {quote.data.derivation.refusal}</Copy>}
       <DataRow label="Pyth equity reference" value={usd(quote.data.oracle.priceUsd)} hint="Underlying share, unadjusted" />
       <DataRow label="Your price ceiling" value={usd(quote.data.derivation.maxPriceUsd)} hint={`Reference + ${(band / 100).toFixed(2)}%`} accent />

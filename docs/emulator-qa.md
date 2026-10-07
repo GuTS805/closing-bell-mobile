@@ -13,3 +13,9 @@ Test device: Android 16 (API 36), Google APIs x86_64 emulator. The release APK w
 | Performance | No prolonged blank or frozen screen was observed during manual navigation. Quote requests completed without an app hang; no benchmark or network latency guarantee was established. |
 
 The current public equity reference is stale, so a fresh-reference within-limit or above-limit verdict could not be validated end to end on this run. The app deliberately blocks that decision until the reference refreshes. The on-chain proof links were checked for routing and network label; the transaction contents were not independently audited in this emulator run.
+
+## October 7 follow-up
+
+Rebuilt the APK with saved-check context. On the Android 16 AOSP test emulator at 320 × 640, the Watch card showed the last saved SPYx check as `OLD REFERENCE`. Opening that saved check restored $250 and a 0.25% limit. Rechecking showed `SINCE YOUR SAVED CHECK` and explained that the equity reference was still too old for a comparison. No app crash appeared in the AndroidRuntime or ReactNativeJS error log.
+
+The Google APIs emulator image showed a system Bluetooth crash dialog during this follow-up, so the AOSP image was used for functional verification. Its screenshot capture is black; UI hierarchy and app logs were used to check the new flow. The fresh-to-fresh numeric change branch remains unverified because the public equity references are stale.
