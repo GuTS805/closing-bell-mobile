@@ -82,4 +82,9 @@ export const s = StyleSheet.create({
   resultCard: { borderColor: '#f2c84b55' },
   resultGreen: { borderColor: '#32db8a66' },
   resultRed: { borderColor: '#f0787066' },
+  onboarding: { paddingHorizontal: 24, paddingVertical: 20, justifyContent: 'space-between' },
+  onboardingBody: { gap: 16 },
+  dots: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.lineBright },
+  dotActive: { width: 24, backgroundColor: colors.gold },
 });

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const RPC_URL = process.env.EXPO_PUBLIC_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
 const XSTOCKS = 'https://api.xstocks.fi/api/v2/public';
-const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+export const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const TOKEN_2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 export const markets = [
   { ticker: 'SPYx', name: 'S&P 500', underlying: 'SPY', mark: 'S', color: '#d4bf83', mint: 'XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W', decimals: 8 },
@@ -16,7 +16,7 @@ const issuerSchema = z.object({ quote: z.number().finite().positive() });
 const routeSchema = z.object({ outAmount: z.string().regex(/^\d+$/), contextSlot: z.number().int().nonnegative(), routePlan: z.array(z.object({ swapInfo: z.object({ label: z.string() }) })).optional() });
 export const reserveSchema = z.object({ symbol: z.string(), timestamp: z.string().datetime(), sharesHeld: z.string(), circulatingSupply: z.string(), holdings: z.array(z.object({ provider: z.string(), quantity: z.string(), symbol: z.string() })) });
 export type Reserve = z.infer<typeof reserveSchema>;
-export type Comparison = { ticker: Ticker; amount: number; tokenFillPrice: number; issuerIndicativePrice: number; differenceBps: number; routeSlot: number; venues: string[]; capturedAt: string };
+export type Comparison = { ticker: Ticker; amount: number; tokensOut: number; tokenFillPrice: number; issuerIndicativePrice: number; differenceBps: number; routeSlot: number; venues: string[]; capturedAt: string };
 
 async function readJson<T>(source: string, url: string, schema: z.ZodType<T>, signal?: AbortSignal, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
@@ -58,8 +58,16 @@ export async function getComparison(ticker: Ticker, amount: number, signal?: Abo
   const tokenFillPrice = amount / output;
   const differenceBps = (tokenFillPrice / issuer.quote - 1) * 10_000;
   if (!Number.isFinite(differenceBps)) throw new Error('Could not compare these prices.');
-  return { ticker, amount, tokenFillPrice, issuerIndicativePrice: issuer.quote, differenceBps,
+  return { ticker, amount, tokensOut: output, tokenFillPrice, issuerIndicativePrice: issuer.quote, differenceBps,
     routeSlot: route.contextSlot, venues: [...new Set((route.routePlan ?? []).map(hop => hop.swapInfo.label))], capturedAt: new Date().toISOString() };
+}
+
+const tradingSchema = z.object({ trading: z.object({ currentPeriod: z.string(), openNow: z.boolean(), nextChangeAt: z.string().datetime().nullable().optional() }) });
+export type MarketSession = { period: string; openNow: boolean; nextChangeAt: string | null };
+/** xStocks trade 24/5; the issuer reports which US session its prices currently follow. */
+export async function getMarketSession(signal?: AbortSignal): Promise<MarketSession> {
+  const { trading } = await readJson('xStocks', `${XSTOCKS}/assets/SPYx`, tradingSchema, signal);
+  return { period: trading.currentPeriod, openNow: trading.openNow, nextChangeAt: trading.nextChangeAt ?? null };
 }
 
 export async function getReserve(ticker: Ticker, signal?: AbortSignal): Promise<Reserve> {

@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMobileWallet } from '@wallet-ui/react-native-web3js';
-import { Comparison, getComparison, getPositions, getReserve, marketFor, markets, percent, RPC_URL, Ticker, usd } from './api';
+import { Comparison, getComparison, getMarketSession, getPositions, getReserve, marketFor, markets, percent, RPC_URL, Ticker, usd } from './api';
+import { Onboarding } from './Onboarding';
+import { ProtectCard } from './ProtectCard';
 import { ageLabel, SavedCheck, savedCheckSchema } from './decision';
 import { Button, colors, Copy, DataRow, Label, Notice, Pill, s } from './ui';
 
@@ -12,6 +14,7 @@ type Tab = 'Markets' | 'Checks' | 'Backing' | 'Wallet';
 const tabs: Tab[] = ['Markets', 'Checks', 'Backing', 'Wallet'];
 const checksKey = 'issuer-checks-v2';
 const watchKey = 'watchlist';
+const onboardedKey = 'onboarded-v1';
 const time = (iso: string) => new Date(iso).toLocaleString();
 
 export function Shell() {
@@ -24,6 +27,7 @@ export function Shell() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [onboarded, setOnboarded] = useState(true);
   const scroll = useRef<ScrollView>(null);
   const offset = useRef(0);
 
@@ -42,7 +46,8 @@ export function Shell() {
   }, []);
 
   useEffect(() => {
-    Promise.all([AsyncStorage.getItem(watchKey), AsyncStorage.getItem(checksKey)]).then(([watchValue, checkValue]) => {
+    Promise.all([AsyncStorage.getItem(watchKey), AsyncStorage.getItem(checksKey), AsyncStorage.getItem(onboardedKey)]).then(([watchValue, checkValue, onboardedValue]) => {
+      setOnboarded(onboardedValue === 'yes');
       if (watchValue) { const parsed: unknown = JSON.parse(watchValue); if (Array.isArray(parsed)) setWatch(markets.filter(m => parsed.includes(m.ticker)).map(m => m.ticker)); }
       if (checkValue) { const parsed: unknown = JSON.parse(checkValue); if (Array.isArray(parsed)) setChecks(parsed.flatMap(item => { const result = savedCheckSchema.safeParse(item); return result.success ? [result.data] : []; })); }
     }).catch(() => setError('Saved data could not be loaded on this device.')).finally(() => setReady(true));
@@ -63,19 +68,22 @@ export function Shell() {
     catch { setError('Could not remove this check from your device.'); }
   };
   const open = (ticker: Ticker, previous: SavedCheck | null = null) => { setRepeatCheck(previous); setStock(ticker); };
+  const finishOnboarding = () => { setOnboarded(true); void AsyncStorage.setItem(onboardedKey, 'yes').catch(() => undefined); };
+
+  if (ready && !onboarded) return <Onboarding done={finishOnboarding} />;
 
   return <SafeAreaView style={s.root}><KeyboardAvoidingView style={s.flex} behavior="padding"><ScrollView ref={scroll} onScroll={event => { offset.current = event.nativeEvent.contentOffset.y; }} scrollEventThrottle={32} key={stock ? `stock:${stock}:${repeatCheck?.id ?? 'new'}` : `tab:${tab}`} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
     <View style={s.header}><Image source={require('../assets/icon.png')} style={s.logo} resizeMode="contain" /><View style={s.flex}><Text style={s.brand} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>Closing <Text style={s.brandGold}>Bell.</Text></Text><Text style={s.faint} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>TOKEN COST. BACKING. CLEAR LIMITS.</Text></View><Pill title="MAINNET" /></View>
     {stock ? <Stock ticker={stock} previous={repeatCheck} watched={watch.includes(stock)} toggle={() => toggle(stock)} back={() => setStock(null)} save={saveCheck} viewChecks={() => { setStock(null); setTab('Checks'); }} /> : <>
-      {tab === 'Markets' && <><View style={s.compactHero}><Label>YOUR TOKEN DESK</Label><Text style={s.sectionHeading}>Know what the route costs.</Text><Copy>Compare a Jupiter token quote with xStocks' indicative token price. The issuer does not provide a price timestamp.</Copy></View>
+      {tab === 'Markets' && <><View style={s.compactHero}><Label>BEFORE YOU SWAP</Label><Text style={s.sectionHeading}>What will this xStock really cost?</Text><Copy>Jupiter's live price for $1,000, next to xStocks' own price for the same token.</Copy><Session /></View>
         {[...markets].sort((a, b) => Number(watch.includes(b.ticker)) - Number(watch.includes(a.ticker))).map(m => <MarketRow key={m.ticker} ticker={m.ticker} watched={watch.includes(m.ticker)} last={checks.find(check => check.ticker === m.ticker)} open={() => open(m.ticker)} />)}
         <Button secondary title="Refresh markets" onPress={() => { void client.invalidateQueries({ queryKey: ['comparison'] }); }} />{!ready && <Copy>Restoring saved checks…</Copy>}</>}
-      {tab === 'Checks' && <><View style={s.hero}><Label>YOUR HISTORY</Label><Text style={s.title}>Saved checks.</Text><Copy>Indicative observations saved on this phone. Run a new check before deciding.</Copy></View>
+      {tab === 'Checks' && <><View style={s.hero}><Label>YOUR HISTORY</Label><Text style={s.title}>Saved checks.</Text><Copy>Snapshots saved on this phone. Prices move, so check again before you swap.</Copy></View>
         {error && <Notice message={error} />}{ready && checks.length === 0 && <Notice message="No checks saved yet. Choose a token, set a limit, and save the result here." />}
-        {checks.map(check => <View key={check.id} style={s.card}><View style={s.row}><View><Label>{check.ticker} / ROUTE CHECK</Label><Text style={s.subtitle}>{usd(check.amount)}</Text></View><Pill title={check.outcome === 'within' ? 'INSIDE LIMIT' : 'ABOVE LIMIT'} tone={check.outcome === 'within' ? 'green' : 'red'} /></View>
-          <DataRow label="Vs issuer indicative" value={percent(check.differenceBps)} hint={`Your limit ${(check.band / 100).toFixed(2)}%`} />
-          <DataRow label="Token route" value={usd(check.tokenFillPrice)} /><DataRow label="Issuer indicative" value={usd(check.issuerIndicativePrice)} />
-          <Text style={s.faint}>CHECKED {time(check.checkedAt).toUpperCase()} · ISSUER PRICE AGE UNKNOWN</Text>
+        {checks.map(check => <View key={check.id} style={s.card}><View style={s.row}><View><Label>{check.ticker} / ROUTE CHECK</Label><Text style={s.subtitle}>{usd(check.amount)}</Text></View><Pill title={check.outcome === 'within' ? 'WITHIN LIMIT' : 'OVER LIMIT'} tone={check.outcome === 'within' ? 'green' : 'red'} /></View>
+          <DataRow label="Over xStocks' price" value={percent(check.differenceBps)} hint={`Your limit ${(check.band / 100).toFixed(2)}%`} />
+          <DataRow label="Jupiter's price" value={usd(check.tokenFillPrice)} /><DataRow label="xStocks' price" value={usd(check.issuerIndicativePrice)} />
+          <Text style={s.faint}>CHECKED {time(check.checkedAt).toUpperCase()}</Text>
           <Button title={`Check ${check.ticker} again`} onPress={() => open(check.ticker, check)} /><Button secondary title="Remove saved check" onPress={() => { void removeCheck(check.id); }} />
         </View>)}
       </>}
@@ -85,16 +93,24 @@ export function Shell() {
   </ScrollView>{!keyboardOpen && <View style={s.tabs}>{tabs.map(item => <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: item === tab && !stock }} style={[s.tab, item === tab && !stock && s.activeTab]} onPress={() => { setStock(null); setTab(item); }}><Text style={[s.tabText, item === tab && !stock && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{item}</Text></Pressable>)}</View>}</KeyboardAvoidingView></SafeAreaView>;
 }
 
+function Session() {
+  const query = useQuery({ queryKey: ['session'], queryFn: ({ signal }) => getMarketSession(signal), staleTime: 60_000, refetchInterval: 300_000 });
+  if (!query.data) return null;
+  const label = query.data.openNow ? query.data.period === 'market' ? 'US MARKET OPEN' : `US ${query.data.period.toUpperCase()} HOURS` : 'US MARKET CLOSED';
+  const next = query.data.nextChangeAt ? ` · CHANGES ${new Date(query.data.nextChangeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+  return <Text style={s.faint}>{label}{next}</Text>;
+}
+
 function MarketRow({ ticker, watched, last, open }: { ticker: Ticker; watched: boolean; last?: SavedCheck; open: () => void }) {
   const market = marketFor(ticker);
   const query = useQuery({ queryKey: ['comparison', ticker, 1000], queryFn: ({ signal }) => getComparison(ticker, 1000, signal) });
   return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${market.name}`} onPress={open} style={({ pressed }) => [s.card, pressed && { borderColor: colors.gold }]}>
     <View style={s.row}><View style={s.badge}><Text style={[s.badgeText, { color: market.color }]}>{market.mark}</Text></View><View style={s.flex}><Text style={s.subtitle}>{ticker}</Text><Text style={s.faint}>{market.name} · {market.underlying} backing{watched ? ' · WATCHING' : ''}</Text></View><Text style={s.back}>↗</Text></View>
-    <View><View style={s.row}><Text style={[s.dataHint, s.flex]}>JUPITER TOKEN QUOTE / $1,000</Text><Pill title={query.isError ? 'UNAVAILABLE' : 'AGE UNKNOWN'} tone={query.isError ? 'red' : 'gold'} /></View><Text style={s.marketPrice} numberOfLines={1} adjustsFontSizeToFit>{query.data ? usd(query.data.tokenFillPrice) : query.isPending ? 'Reading…' : '—'}</Text></View>
-    <DataRow label="Issuer indicative token" value={query.data ? usd(query.data.issuerIndicativePrice) : '—'} hint="xStocks · price timestamp not supplied" />
-    <DataRow label="Route difference" value={query.data ? percent(query.data.differenceBps) : '—'} hint="Token route versus issuer indicative" accent={!!query.data} />
-    {query.data && <Text style={s.faint}>ROUTE REQUESTED {time(query.data.capturedAt).toUpperCase()} · SOURCE AGE UNKNOWN</Text>}
-    {last && <Text style={s.faint}>LAST CHECK {new Date(last.checkedAt).toLocaleDateString()} · {last.outcome === 'within' ? 'INSIDE LIMIT' : 'ABOVE LIMIT'}</Text>}
+    <View><View style={s.row}><Text style={[s.dataHint, s.flex]}>JUPITER PRICE FOR $1,000</Text><Pill title={query.isError ? 'UNAVAILABLE' : query.data ? `${percent(query.data.differenceBps)} OVER` : 'READING'} tone={query.isError ? 'red' : 'gold'} /></View><Text style={s.marketPrice} numberOfLines={1} adjustsFontSizeToFit>{query.data ? usd(query.data.tokenFillPrice) : query.isPending ? 'Reading…' : '—'}</Text></View>
+    <DataRow label="xStocks' price" value={query.data ? usd(query.data.issuerIndicativePrice) : '—'} hint="The issuer's indicative price for the token" />
+    <DataRow label="You'd pay over xStocks" value={query.data ? percent(query.data.differenceBps) : '—'} hint="Jupiter price versus xStocks' price" accent={!!query.data} />
+    {query.data && <Text style={s.faint}>CHECKED {time(query.data.capturedAt).toUpperCase()} · XSTOCKS DOESN'T TIMESTAMP ITS PRICE</Text>}
+    {last && <Text style={s.faint}>YOUR LAST CHECK {new Date(last.checkedAt).toLocaleDateString()} · {last.outcome === 'within' ? 'WITHIN LIMIT' : 'OVER LIMIT'}</Text>}
     {query.isError && <Text style={s.faint}>{query.error.message}</Text>}
   </Pressable>;
 }
@@ -118,31 +134,32 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
     catch { setError('Could not save this check on your device.'); }
   }
   return <><Pressable accessibilityRole="button" onPress={back}><Text style={s.back}>← Markets</Text></Pressable>
-    <View style={s.hero}><Label>PRICE YOUR ROUTE / {ticker}</Label><Text style={s.title}>{market.name}</Text><Copy>See whether a token route stays inside your limit against the issuer's indicative token price.</Copy></View>
+    <View style={s.hero}><Label>CHECK BEFORE YOU SWAP / {ticker}</Label><Text style={s.title}>{market.name}</Text><Copy>{`Set your amount and the most you'll pay above xStocks' price. We check Jupiter's live route against it.`}</Copy></View>
     {previous && <Copy>Previous amount and limit restored. Run a new check to see what changed.</Copy>}
     <Button secondary title={watched ? 'Remove from watchlist' : 'Add to watchlist'} onPress={toggle} />
-    <View style={s.card}><View style={s.row}><Label>01 / YOUR LIMIT</Label><Pill title="READ ONLY" tone="muted" /></View>
-      <Text style={s.dataLabel}>Amount to inspect · USDC</Text><TextInput accessibilityLabel="Amount in USDC" style={s.input} value={amount} onChangeText={text => { setAmount(text.replace(/,/g, '.').replace(/\s/g, '')); setReview(false); setSaved(false); }} keyboardType="decimal-pad" />
+    <View style={s.card}><View style={s.row}><Label>01 / YOUR LIMIT</Label><Pill title="NO SIGNING" tone="muted" /></View>
+      <Text style={s.dataLabel}>How much USDC will you spend?</Text><TextInput accessibilityLabel="Amount in USDC" style={s.input} value={amount} onChangeText={text => { setAmount(text.replace(/,/g, '.').replace(/\s/g, '')); setReview(false); setSaved(false); }} keyboardType="decimal-pad" />
       {!valid && <Copy>Enter $100 to $10,000,000 with up to two decimals.</Copy>}
-      <Text style={s.dataLabel}>Maximum above issuer indicative</Text><View style={s.row}>{[10, 25, 50, 100].map(option => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: band === option }} onPress={() => { setBand(option); setReview(false); setSaved(false); }} style={[s.bandOption, band === option && s.bandSelected]}><Text style={[s.bandText, band === option && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{(option / 100).toFixed(2)}%</Text></Pressable>)}</View>
-      <Button title="Check this route" disabled={!valid || quote.isFetching} onPress={() => { setReview(true); if (review) void quote.refetch(); }} />
+      <Text style={s.dataLabel}>{`Most you'll pay above xStocks' price`}</Text><View style={s.row}>{[10, 25, 50, 100].map(option => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: band === option }} onPress={() => { setBand(option); setReview(false); setSaved(false); }} style={[s.bandOption, band === option && s.bandSelected]}><Text style={[s.bandText, band === option && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{(option / 100).toFixed(2)}%</Text></Pressable>)}</View>
+      <Button title="Check Jupiter's price" disabled={!valid || quote.isFetching} onPress={() => { setReview(true); if (review) void quote.refetch(); }} />
     </View>
     {review && quote.isFetching && <Notice loading message="Reading Jupiter and xStocks…" />}
     {review && quote.isError && <Notice message={quote.error.message} retry={() => void quote.refetch()} />}
     {result && outcome && <View style={[s.card, s.resultCard, outcome === 'above' && s.resultRed]}>
-      <View style={s.row}><Label>02 / INDICATIVE RESULT</Label><Pill title={outcome === 'above' ? 'ABOVE LIMIT' : 'INSIDE LIMIT'} tone={outcome === 'above' ? 'red' : 'green'} /></View>
-      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{percent(result.differenceBps)}</Text><Copy>{outcome === 'above' ? 'The quoted token route is above your chosen indicative limit.' : 'The quoted token route is inside your chosen indicative limit.'}</Copy>
-      <DataRow label="Jupiter token route" value={usd(result.tokenFillPrice)} hint={result.venues.join(', ') || `Solana slot ${result.routeSlot}`} />
-      <DataRow label="xStocks indicative token" value={usd(result.issuerIndicativePrice)} hint="Issuer does not supply a price timestamp" />
-      <DataRow label="Your indicative ceiling" value={usd(result.issuerIndicativePrice * (1 + band / 10_000))} hint={`Issuer indicative + ${(band / 100).toFixed(2)}%`} accent />
-      <Text style={s.faint}>ROUTE REQUESTED {time(result.capturedAt).toUpperCase()} · ISSUER PRICE AGE UNKNOWN</Text>
+      <View style={s.row}><Label>02 / RESULT</Label><Pill title={outcome === 'above' ? 'OVER YOUR LIMIT' : 'WITHIN YOUR LIMIT'} tone={outcome === 'above' ? 'red' : 'green'} /></View>
+      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{percent(result.differenceBps)}</Text><Copy>{`You'd pay ${percent(result.differenceBps)} over xStocks' price for this swap. Your limit is ${(band / 100).toFixed(2)}%.`}</Copy>
+      <DataRow label="Jupiter's price for you" value={usd(result.tokenFillPrice)} hint={result.venues.length ? `Route via ${result.venues.join(', ')}` : `Solana slot ${result.routeSlot}`} />
+      <DataRow label="xStocks' price" value={usd(result.issuerIndicativePrice)} hint="Indicative; xStocks doesn't timestamp it" />
+      <DataRow label="Your limit price" value={usd(result.issuerIndicativePrice * (1 + band / 10_000))} hint={`xStocks' price + ${(band / 100).toFixed(2)}%`} accent />
+      <Text style={s.faint}>CHECKED {time(result.capturedAt).toUpperCase()}</Text>
       {previous && <View style={s.notice}><Label>SINCE YOUR SAVED CHECK</Label><Copy>{previous.amount === value && previous.band === band
         ? `Previous ${percent(previous.differenceBps)} · now ${percent(result.differenceBps)} · ${Math.abs(result.differenceBps - previous.differenceBps).toFixed(0)} bp ${result.differenceBps >= previous.differenceBps ? 'higher' : 'lower'}. Both are indicative snapshots.`
         : 'A like-for-like change needs the same amount and limit.'}</Copy></View>}
       <Button secondary title={saved ? 'Saved to your checks' : 'Save this check'} disabled={saved} onPress={() => { void saveCurrent(); }} />
       {saved && <Button title="View saved checks" onPress={viewChecks} />}{error && <Notice message={error} />}
     </View>}
-    <Notice message="This comparison uses two token prices. It is not a live underlying share quote or an executable on-chain guard. Issuer price age is unknown; no transaction is signed." />
+    {result && <ProtectCard result={result} band={band} />}
+    <Notice message="Closing Bell compares two prices for the same token: Jupiter's and xStocks'. It is not the underlying share price. It never signs, swaps or moves your funds." />
     <Button secondary title="Refresh route" disabled={!review || quote.isFetching} onPress={() => void quote.refetch()} />
   </>;
 }
