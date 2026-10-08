@@ -1,5 +1,26 @@
 # Android emulator QA
 
+## October 9 v0.2.0 pass: protect, alerts, history, widget, share
+
+Physical phone: Android 13 arm64 (model IV2201). Emulator: Android 16 Google APIs x86_64, headless. Screenshots are local in `artifacts/qa/phone/` and `artifacts/qa/oct9/` (ignored by Git); screens of the phone's personal home pages were deleted and are not part of the record.
+
+| Area | Result |
+| --- | --- |
+| Update | v0.2.0 installed over v0.1.2 on the phone as an update. |
+| Intro | The three-step intro showed on first launch and led to Markets. |
+| Markets | Plain-language cards, and the US session from xStocks (`US MARKET OPEN · CHANGES 1:30 am` at 00:02 IST). |
+| Protect | $100 SPYx at a 1.00% limit: max slippage 0.38%, minimum received 0.128118 SPYx, limit price $780.53 (100 ÷ 780.53 = 0.128118). Copy put the minimum on the clipboard; Open in Jupiter opened `jup.ag` with USDC → SPYx selected. |
+| Over the limit | At 0.10%: `OVER YOUR LIMIT`, `DON'T SWAP YET`, and Alert me. |
+| Alerts | Alert me raised Android's notification permission prompt; after Allow, the alert was listed in Checks and a WorkManager job was registered. A delivered notification was not observed: it needs the route to move within the limit. The transition logic is covered by tests. |
+| Refetch defect | Returning from the permission prompt refetched the quote and removed the result and protect card. Fixed: the last result stays on screen during a refetch. |
+| Widget | Placed from the app via the launcher's pin prompt on the phone and the emulator. On the emulator it showed all four tokens; the first build wrapped `%` onto a second line, fixed by a smaller single-line value. A forced run of the background job (`cmd jobscheduler run -f`) finished headlessly and updated the widget (`Updated 1:04 AM`) with the app closed. |
+| History | After six samples, the SPYx chart showed six bars against the dashed 0.50% limit. The first scale started at zero and hid small moves; it now scales to the observed range. |
+| Share | Share this check rendered the result card as an image in Android's share sheet. The footer line was truncated and was shortened. |
+| Tests | `npm test`: 10 passing (protection invariant over 5,000 random cases, alert transitions). |
+| Stability | No Closing Bell entry in the phone's crash log. |
+
+Not yet re-run on v0.2.0: Solflare connect against the new identity host `guts805.github.io` (that host serves `application/json; charset=utf-8`).
+
 ## October 8 physical phone and production wallet pass (v0.1.1 → v0.1.2)
 
 Test device: Android 13 arm64 phone (model IV2201), 1080 × 2400 at density 480, Solflare 2.29.1. Local screenshots are in `artifacts/qa/phone/` (ignored by Git). Screens inside Solflare were not captured.
