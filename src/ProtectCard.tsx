@@ -4,6 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Comparison, marketFor, USDC, usd } from './api';
 import { jupiterSwapUrl, protectSwap } from './protect';
 import { Button, Copy, DataRow, Label, Pill, s } from './ui';
+import { AlertButton } from './WatchViews';
 
 const tokens = (value: number) => value.toLocaleString('en-US', { maximumFractionDigits: 6 });
 
@@ -28,6 +29,7 @@ export function ProtectCard({ result, band }: { result: Comparison; band: number
       <View style={s.row}><Label>03 / WHAT TO DO</Label><Pill title="DON'T SWAP YET" tone="red" /></View>
       <Text style={s.subtitle}>This route is {(protection.overBps / 100).toFixed(2)}% past your limit.</Text>
       <Copy>No swap setting can keep this price under {usd(protection.ceiling)}. Wait and check again, try a smaller amount, or accept a wider limit than {limit}.</Copy>
+      <AlertButton ticker={result.ticker} amount={result.amount} band={band} />
     </View>;
   }
   if (protection.kind === 'tight') {
@@ -35,6 +37,7 @@ export function ProtectCard({ result, band }: { result: Comparison; band: number
       <View style={s.row}><Label>03 / WHAT TO DO</Label><Pill title="AT YOUR LIMIT" tone="gold" /></View>
       <Text style={s.subtitle}>The route sits right at your limit.</Text>
       <Copy>Any price move before the swap lands would cross {usd(protection.ceiling)}. Wait for a better route or widen your limit beyond {limit}.</Copy>
+      <AlertButton ticker={result.ticker} amount={result.amount} band={band} />
     </View>;
   }
   return <View style={[s.card, s.resultGreen]}>

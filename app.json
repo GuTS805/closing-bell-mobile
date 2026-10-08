@@ -2,7 +2,7 @@
   "expo": {
     "name": "Closing Bell",
     "slug": "closing-bell-mobile",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.closingbell.mobile",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#0b0e10",
         "foregroundImage": "./assets/icon.png"
@@ -33,6 +33,37 @@
             "node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf",
             "node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"
           ]
+        }
+      ],
+      "expo-background-task",
+      [
+        "react-native-android-widget",
+        {
+          "fonts": [
+            "./node_modules/@expo-google-fonts/manrope/700Bold/Manrope_700Bold.ttf",
+            "./node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf",
+            "./node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf",
+            "./node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"
+          ],
+          "widgets": [
+            {
+              "name": "RouteCost",
+              "label": "Closing Bell route cost",
+              "description": "What Jupiter charges over xStocks' price for $1,000 of each xStock.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#f2c84b"
         }
       ]
     ]

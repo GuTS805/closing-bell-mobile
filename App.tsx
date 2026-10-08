@@ -5,7 +5,11 @@ import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-
 import { MobileWalletProvider, WalletAuthorization, WalletAuthorizationCache } from '@wallet-ui/react-native-web3js';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Shell } from './src/Shell';
+import * as Notifications from 'expo-notifications';
 import { RPC_URL } from './src/api';
+
+// Alerts that arrive while the app is open still show as a banner.
+Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }) });
 
 export default function App() {
   useEffect(() => {
@@ -18,7 +22,7 @@ export default function App() {
     return { get: async () => authorization, set: async value => { authorization = value; }, clear: async () => { authorization = undefined; } };
   });
   return <SafeAreaProvider><QueryClientProvider client={client}>
-    <MobileWalletProvider cache={cache} chain="solana:mainnet" endpoint={RPC_URL} identity={{ name: 'Closing Bell', uri: 'https://closing-bell-eight.vercel.app' }}>
+    <MobileWalletProvider cache={cache} chain="solana:mainnet" endpoint={RPC_URL} identity={{ name: 'Closing Bell', uri: 'https://guts805.github.io' }}>
       <StatusBar style="light" /><Shell />
     </MobileWalletProvider>
   </QueryClientProvider></SafeAreaProvider>;

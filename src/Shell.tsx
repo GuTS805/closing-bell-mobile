@@ -7,6 +7,10 @@ import { useMobileWallet } from '@wallet-ui/react-native-web3js';
 import { Comparison, getComparison, getMarketSession, getPositions, getReserve, marketFor, markets, percent, RPC_URL, Ticker, usd } from './api';
 import { Onboarding } from './Onboarding';
 import { ProtectCard } from './ProtectCard';
+import { ensureBackgroundSweep } from './background';
+import { lastSweep, sweep } from './watch';
+import { refreshWidget } from './widget/handler';
+import { AlertList, HistoryChart, WidgetButton } from './WatchViews';
 import { ageLabel, SavedCheck, savedCheckSchema } from './decision';
 import { Button, colors, Copy, DataRow, Label, Notice, Pill, s } from './ui';
 
@@ -52,6 +56,17 @@ export function Shell() {
       if (checkValue) { const parsed: unknown = JSON.parse(checkValue); if (Array.isArray(parsed)) setChecks(parsed.flatMap(item => { const result = savedCheckSchema.safeParse(item); return result.success ? [result.data] : []; })); }
     }).catch(() => setError('Saved data could not be loaded on this device.')).finally(() => setReady(true));
   }, []);
+  // Keep history and the widget current while the app is open; the background task covers the rest.
+  useEffect(() => {
+    void ensureBackgroundSweep().catch(() => undefined);
+    void (async () => {
+      const last = await lastSweep();
+      if (last && Date.now() - last < 600_000) return;
+      await sweep();
+      await refreshWidget();
+      await client.invalidateQueries({ queryKey: ['history'] });
+    })().catch(() => undefined);
+  }, [client]);
   useEffect(() => { const listener = BackHandler.addEventListener('hardwareBackPress', () => { if (!stock) return false; setStock(null); return true; }); return () => listener.remove(); }, [stock]);
   const toggle = (ticker: Ticker) => {
     const next = watch.includes(ticker) ? watch.filter(item => item !== ticker) : [...watch, ticker];
@@ -77,9 +92,9 @@ export function Shell() {
     {stock ? <Stock ticker={stock} previous={repeatCheck} watched={watch.includes(stock)} toggle={() => toggle(stock)} back={() => setStock(null)} save={saveCheck} viewChecks={() => { setStock(null); setTab('Checks'); }} /> : <>
       {tab === 'Markets' && <><View style={s.compactHero}><Label>BEFORE YOU SWAP</Label><Text style={s.sectionHeading}>What will this xStock really cost?</Text><Copy>Jupiter's live price for $1,000, next to xStocks' own price for the same token.</Copy><Session /></View>
         {[...markets].sort((a, b) => Number(watch.includes(b.ticker)) - Number(watch.includes(a.ticker))).map(m => <MarketRow key={m.ticker} ticker={m.ticker} watched={watch.includes(m.ticker)} last={checks.find(check => check.ticker === m.ticker)} open={() => open(m.ticker)} />)}
-        <Button secondary title="Refresh markets" onPress={() => { void client.invalidateQueries({ queryKey: ['comparison'] }); }} />{!ready && <Copy>Restoring saved checks…</Copy>}</>}
+        <Button secondary title="Refresh markets" onPress={() => { void client.invalidateQueries({ queryKey: ['comparison'] }); }} /><WidgetButton />{!ready && <Copy>Restoring saved checks…</Copy>}</>}
       {tab === 'Checks' && <><View style={s.hero}><Label>YOUR HISTORY</Label><Text style={s.title}>Saved checks.</Text><Copy>Snapshots saved on this phone. Prices move, so check again before you swap.</Copy></View>
-        {error && <Notice message={error} />}{ready && checks.length === 0 && <Notice message="No checks saved yet. Choose a token, set a limit, and save the result here." />}
+        <AlertList />{error && <Notice message={error} />}{ready && checks.length === 0 && <Notice message="No checks saved yet. Choose a token, set a limit, and save the result here." />}
         {checks.map(check => <View key={check.id} style={s.card}><View style={s.row}><View><Label>{check.ticker} / ROUTE CHECK</Label><Text style={s.subtitle}>{usd(check.amount)}</Text></View><Pill title={check.outcome === 'within' ? 'WITHIN LIMIT' : 'OVER LIMIT'} tone={check.outcome === 'within' ? 'green' : 'red'} /></View>
           <DataRow label="Over xStocks' price" value={percent(check.differenceBps)} hint={`Your limit ${(check.band / 100).toFixed(2)}%`} />
           <DataRow label="Jupiter's price" value={usd(check.tokenFillPrice)} /><DataRow label="xStocks' price" value={usd(check.issuerIndicativePrice)} />
@@ -159,6 +174,7 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
       {saved && <Button title="View saved checks" onPress={viewChecks} />}{error && <Notice message={error} />}
     </View>}
     {result && <ProtectCard result={result} band={band} />}
+    <HistoryChart ticker={ticker} band={band} />
     <Notice message="Closing Bell compares two prices for the same token: Jupiter's and xStocks'. It is not the underlying share price. It never signs, swaps or moves your funds." />
     <Button secondary title="Refresh route" disabled={!review || quote.isFetching} onPress={() => void quote.refetch()} />
   </>;
