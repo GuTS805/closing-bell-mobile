@@ -1,5 +1,24 @@
 # Android emulator QA
 
+## October 8 physical phone and production wallet pass (v0.1.1 → v0.1.2)
+
+Test device: Android 13 arm64 phone (model IV2201), 1080 × 2400 at density 480, Solflare 2.29.1. Local screenshots are in `artifacts/qa/phone/` (ignored by Git). Screens inside Solflare were not captured.
+
+The phone carried an October 6 debug-signed prototype, which cannot be updated by a release-signed APK, so it was uninstalled and the v0.1.1 release installed.
+
+| Area | Result |
+| --- | --- |
+| Market check | $1,000 SPYx at a 0.50% limit returned `ABOVE LIMIT` at +0.64%. |
+| Save, restart | The saved check was listed after a force stop and relaunch. |
+| Update | v0.1.2 installed over v0.1.1 as an update; the saved check remained. |
+| Recheck | `Check SPYx again` restored the amount and limit; a $2,500.50 recheck showed `SINCE YOUR SAVED CHECK`. |
+| Backing | Issuer reserve records loaded. |
+| Wallet without MWA | With only the Jupiter app installed, Connect wallet showed `No compatible wallet is installed…`. |
+| Production wallet | Connect wallet opened Solflare; after the tester approved, the app showed the returned address and `No supported xStocks found at this address` from mainnet RPC. Disconnect cleared the address. No signing was requested. Whether Solflare displayed a verified-domain indicator was not recorded. |
+| Keyboard (v0.1.1) | **Defect:** with edge-to-edge display, the keyboard covered the amount field and `Check this route`, and would cover the address field. |
+| Keyboard (v0.1.2) | The focused amount and address fields move above the keyboard, the content can be scrolled to `Check this route` with the keyboard open, and the tab bar hides while typing. A comma typed from the phone keyboard was read as a decimal point (`2500,5` → `2500.5`). |
+| Stability | No Closing Bell entry in the crash log during the session. |
+
 ## October 8 network-failure and small-screen pass (v0.1.1)
 
 Test device: Android 16 Google APIs x86_64 emulator, display overridden to 320 × 640 dp (640 × 1280 px at density 320) with system font scale 1.3. Local before/after screenshots are in `artifacts/qa/oct8/` (ignored by Git).

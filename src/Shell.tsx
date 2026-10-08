@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { BackHandler, Image, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { BackHandler, Image, Keyboard, KeyboardAvoidingView, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +23,23 @@ export function Shell() {
   const [checks, setChecks] = useState<SavedCheck[]>([]);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+  const offset = useRef(0);
+
+  // Edge-to-edge Android does not resize the window for the keyboard, so keep the focused field above it.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const show = Keyboard.addListener('keyboardDidShow', event => {
+      setKeyboardOpen(true);
+      timer = setTimeout(() => TextInput.State.currentlyFocusedInput()?.measureInWindow((_x, y, _w, height) => {
+        const overlap = y + height + 24 - event.endCoordinates.screenY;
+        if (overlap > 0) scroll.current?.scrollTo({ y: offset.current + overlap, animated: true });
+      }), 60);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardOpen(false));
+    return () => { show.remove(); hide.remove(); clearTimeout(timer); };
+  }, []);
 
   useEffect(() => {
     Promise.all([AsyncStorage.getItem(watchKey), AsyncStorage.getItem(checksKey)]).then(([watchValue, checkValue]) => {
@@ -47,7 +64,7 @@ export function Shell() {
   };
   const open = (ticker: Ticker, previous: SavedCheck | null = null) => { setRepeatCheck(previous); setStock(ticker); };
 
-  return <SafeAreaView style={s.root}><ScrollView key={stock ? `stock:${stock}:${repeatCheck?.id ?? 'new'}` : `tab:${tab}`} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+  return <SafeAreaView style={s.root}><KeyboardAvoidingView style={s.flex} behavior="padding"><ScrollView ref={scroll} onScroll={event => { offset.current = event.nativeEvent.contentOffset.y; }} scrollEventThrottle={32} key={stock ? `stock:${stock}:${repeatCheck?.id ?? 'new'}` : `tab:${tab}`} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
     <View style={s.header}><Image source={require('../assets/icon.png')} style={s.logo} resizeMode="contain" /><View style={s.flex}><Text style={s.brand} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>Closing <Text style={s.brandGold}>Bell.</Text></Text><Text style={s.faint} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>TOKEN COST. BACKING. CLEAR LIMITS.</Text></View><Pill title="MAINNET" /></View>
     {stock ? <Stock ticker={stock} previous={repeatCheck} watched={watch.includes(stock)} toggle={() => toggle(stock)} back={() => setStock(null)} save={saveCheck} viewChecks={() => { setStock(null); setTab('Checks'); }} /> : <>
       {tab === 'Markets' && <><View style={s.compactHero}><Label>YOUR TOKEN DESK</Label><Text style={s.sectionHeading}>Know what the route costs.</Text><Copy>Compare a Jupiter token quote with xStocks' indicative token price. The issuer does not provide a price timestamp.</Copy></View>
@@ -65,7 +82,7 @@ export function Shell() {
       {tab === 'Backing' && <Backing />}
       {tab === 'Wallet' && <Wallet />}
     </>}
-  </ScrollView><View style={s.tabs}>{tabs.map(item => <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: item === tab && !stock }} style={[s.tab, item === tab && !stock && s.activeTab]} onPress={() => { setStock(null); setTab(item); }}><Text style={[s.tabText, item === tab && !stock && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{item}</Text></Pressable>)}</View></SafeAreaView>;
+  </ScrollView>{!keyboardOpen && <View style={s.tabs}>{tabs.map(item => <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: item === tab && !stock }} style={[s.tab, item === tab && !stock && s.activeTab]} onPress={() => { setStock(null); setTab(item); }}><Text style={[s.tabText, item === tab && !stock && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{item}</Text></Pressable>)}</View>}</KeyboardAvoidingView></SafeAreaView>;
 }
 
 function MarketRow({ ticker, watched, last, open }: { ticker: Ticker; watched: boolean; last?: SavedCheck; open: () => void }) {
