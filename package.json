@@ -37,7 +37,7 @@
     "build:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-apk.ps1",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/protect.test.mjs"
+    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/protect.test.mjs tests/alertState.test.mjs"
   },
   "private": true
 }

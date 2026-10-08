@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { z } from 'zod';
 import { Comparison, getComparison, markets, percent, Ticker, usd } from './api';
+import { nextAlertState } from './alertState';
 
 const alertsKey = 'alerts-v1';
 const historyKey = 'history-v1';
@@ -80,8 +81,8 @@ export async function sweep(signal?: AbortSignal) {
   const next = await Promise.all(alerts.map(async alert => {
     try {
       const result = alert.amount === referenceAmount ? samples.find(sample => sample.ticker === alert.ticker) ?? await getComparison(alert.ticker, alert.amount, signal) : await getComparison(alert.ticker, alert.amount, signal);
-      const within = result.differenceBps <= alert.band;
-      if (within && !alert.within) await notifyWithin(alert, result);
+      const { within, notify } = nextAlertState(alert, result.differenceBps);
+      if (notify) await notifyWithin(alert, result);
       return { ...alert, within };
     } catch { return alert; }
   }));

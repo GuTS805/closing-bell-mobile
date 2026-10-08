@@ -140,7 +140,8 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
   const value = Number(amount);
   const valid = /^\d+(\.\d{1,2})?$/.test(amount) && value >= 100 && value <= 10_000_000;
   const quote = useQuery({ queryKey: ['comparison', ticker, value, band], enabled: review && valid, queryFn: ({ signal }) => getComparison(ticker, value, signal), staleTime: 0 });
-  const result: Comparison | null = review && !quote.isFetching && !quote.isError ? quote.data ?? null : null;
+  // Keep the last result on screen during a refetch (e.g. on returning from Jupiter or a permission prompt); the query key changes with amount and limit, so it always matches the inputs.
+  const result: Comparison | null = review && !quote.isError ? quote.data ?? null : null;
   const outcome = result ? result.differenceBps > band ? 'above' : 'within' : null;
   async function saveCurrent() {
     if (!result || !outcome || saved) return;
