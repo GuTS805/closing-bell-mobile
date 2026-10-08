@@ -61,8 +61,11 @@ export function HistoryChart({ ticker, band }: { ticker: Ticker; band: number })
   if (samples.length < 2) return <Notice message="Your price history starts now. Closing Bell samples Jupiter about every 15 minutes in the background and builds a 7-day chart here." />;
   const bars = samples.slice(-48);
   const values = bars.map(sample => sample.bps);
-  const max = Math.max(band, ...values, 1), min = Math.min(0, ...values);
-  const span = max - min || 1;
+  // Scale to the observed range and the limit, so moves of a few basis points stay visible.
+  const low = Math.min(band, ...values), high = Math.max(band, ...values);
+  const pad = Math.max((high - low) * 0.4, 5);
+  const min = low - pad, max = high + pad;
+  const span = max - min;
   const latest = bars[bars.length - 1];
   const within = samples.filter(sample => sample.bps <= band).length;
   return <View style={s.card}>
@@ -71,7 +74,7 @@ export function HistoryChart({ ticker, band }: { ticker: Ticker; band: number })
       {bars.map(sample => <View key={sample.t} style={[s.bar, { height: `${Math.max(4, (sample.bps - min) / span * 100)}%`, backgroundColor: sample.bps <= band ? colors.green : colors.red }]} />)}
       <View style={[s.limitLine, { bottom: `${(band - min) / span * 100}%` }]} />
     </View>
-    <Copy>{`Now ${percent(latest.bps)} for $1,000. The line is your ${(band / 100).toFixed(2)}% limit. ${samples.length} samples since ${new Date(samples[0].t).toLocaleDateString()}.`}</Copy>
+    <Copy>{`Now ${percent(latest.bps)} for $1,000, ranging ${percent(Math.min(...values))} to ${percent(Math.max(...values))}. The dashed line is your ${(band / 100).toFixed(2)}% limit. ${samples.length} samples since ${new Date(samples[0].t).toLocaleDateString()}.`}</Copy>
   </View>;
 }
 

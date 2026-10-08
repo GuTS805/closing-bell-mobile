@@ -19,7 +19,7 @@ export function RouteWidget({ rows, updatedAt }: { rows: WidgetRow[]; updatedAt:
         const tone = row.bps === null ? colors.faint : row.bps <= row.limitBps ? colors.green : colors.red;
         return <FlexWidget key={row.ticker} style={{ backgroundColor: colors.card, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 6, flexDirection: 'column', alignItems: 'center', flex: 1, marginHorizontal: 2 }}>
           <TextWidget text={row.ticker} style={{ fontSize: 11, fontFamily: 'Inter_600SemiBold', color: colors.faint }} />
-          <TextWidget text={row.bps === null ? '—' : pct(row.bps)} style={{ fontSize: 15, fontFamily: 'Manrope_700Bold', color: tone }} />
+          <TextWidget text={row.bps === null ? '—' : pct(row.bps)} maxLines={1} style={{ fontSize: 13, fontFamily: 'Manrope_700Bold', color: tone }} />
         </FlexWidget>;
       })}
     </FlexWidget>

@@ -55,7 +55,8 @@
               "targetCellWidth": 4,
               "targetCellHeight": 2,
               "resizeMode": "horizontal|vertical",
-              "updatePeriodMillis": 1800000
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/widget-preview.png"
             }
           ]
         }
@@ -65,7 +66,8 @@
         {
           "color": "#f2c84b"
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }

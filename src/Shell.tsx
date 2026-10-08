@@ -11,6 +11,7 @@ import { ensureBackgroundSweep } from './background';
 import { lastSweep, sweep } from './watch';
 import { refreshWidget } from './widget/handler';
 import { AlertList, HistoryChart, WidgetButton } from './WatchViews';
+import { ShareButton } from './Share';
 import { ageLabel, SavedCheck, savedCheckSchema } from './decision';
 import { Button, colors, Copy, DataRow, Label, Notice, Pill, s } from './ui';
 
@@ -137,6 +138,7 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
   const [review, setReview] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const resultCard = useRef<View>(null);
   const value = Number(amount);
   const valid = /^\d+(\.\d{1,2})?$/.test(amount) && value >= 100 && value <= 10_000_000;
   const quote = useQuery({ queryKey: ['comparison', ticker, value, band], enabled: review && valid, queryFn: ({ signal }) => getComparison(ticker, value, signal), staleTime: 0 });
@@ -161,7 +163,7 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
     </View>
     {review && quote.isFetching && <Notice loading message="Reading Jupiter and xStocks…" />}
     {review && quote.isError && <Notice message={quote.error.message} retry={() => void quote.refetch()} />}
-    {result && outcome && <View style={[s.card, s.resultCard, outcome === 'above' && s.resultRed]}>
+    {result && outcome && <><View ref={resultCard} collapsable={false} style={[s.card, s.resultCard, outcome === 'above' && s.resultRed]}>
       <View style={s.row}><Label>02 / RESULT</Label><Pill title={outcome === 'above' ? 'OVER YOUR LIMIT' : 'WITHIN YOUR LIMIT'} tone={outcome === 'above' ? 'red' : 'green'} /></View>
       <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{percent(result.differenceBps)}</Text><Copy>{`You'd pay ${percent(result.differenceBps)} over xStocks' price for this swap. Your limit is ${(band / 100).toFixed(2)}%.`}</Copy>
       <DataRow label="Jupiter's price for you" value={usd(result.tokenFillPrice)} hint={result.venues.length ? `Route via ${result.venues.join(', ')}` : `Solana slot ${result.routeSlot}`} />
@@ -171,9 +173,12 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
       {previous && <View style={s.notice}><Label>SINCE YOUR SAVED CHECK</Label><Copy>{previous.amount === value && previous.band === band
         ? `Previous ${percent(previous.differenceBps)} · now ${percent(result.differenceBps)} · ${Math.abs(result.differenceBps - previous.differenceBps).toFixed(0)} bp ${result.differenceBps >= previous.differenceBps ? 'higher' : 'lower'}. Both are indicative snapshots.`
         : 'A like-for-like change needs the same amount and limit.'}</Copy></View>}
+      <Text style={[s.faint, s.signature]} numberOfLines={1} adjustsFontSizeToFit>{`CLOSING BELL · ${ticker} · ${usd(value)}`}</Text>
+    </View>
       <Button secondary title={saved ? 'Saved to your checks' : 'Save this check'} disabled={saved} onPress={() => { void saveCurrent(); }} />
       {saved && <Button title="View saved checks" onPress={viewChecks} />}{error && <Notice message={error} />}
-    </View>}
+      <ShareButton target={resultCard} title={`Share ${ticker} check`} />
+    </>}
     {result && <ProtectCard result={result} band={band} />}
     <HistoryChart ticker={ticker} band={band} />
     <Notice message="Closing Bell compares two prices for the same token: Jupiter's and xStocks'. It is not the underlying share price. It never signs, swaps or moves your funds." />

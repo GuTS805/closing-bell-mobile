@@ -87,6 +87,7 @@ export const s = StyleSheet.create({
   dots: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.lineBright },
   dotActive: { width: 24, backgroundColor: colors.gold },
+  signature: { color: colors.gold, letterSpacing: 1 },
   chart: { height: 96, flexDirection: 'row', alignItems: 'flex-end', gap: 2, borderBottomWidth: 1, borderBottomColor: colors.line },
   bar: { flex: 1, borderTopLeftRadius: 2, borderTopRightRadius: 2, opacity: 0.85 },
   limitLine: { position: 'absolute', left: 0, right: 0, borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: colors.gold },

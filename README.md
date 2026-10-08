@@ -1,6 +1,17 @@
 # Closing Bell Mobile
 
-Standalone Android app for checking xStock token route prices, issuer indicative prices, reserve records, and token holdings on Solana. It does not call the Closing Bell web backend or require a Pyth API key.
+Android app that checks what a Jupiter swap into an xStock (SPYx, AAPLx, NVDAx, TSLAx) really costs against xStocks' own price for the token, then turns your limit into Jupiter settings that the chain enforces. It runs entirely on the phone: it calls Jupiter, xStocks and Solana RPC directly, needs no backend and no API key, and never signs or moves funds.
+
+## What it does
+
+- **Check:** for your amount, Jupiter's live route price next to xStocks' indicative token price, and how far over it you would pay.
+- **Protect this swap:** when the route is within your limit, the max slippage and minimum received that make Jupiter's on-chain minimum-output check cancel any fill above your limit price, with a hand-off to Jupiter's swap for the pair. Both values are rounded in the user's favour; `npm test` checks the invariant over 5,000 random cases.
+- **Alerts:** when the route is over your limit, a background check about every 15 minutes notifies you once it moves within.
+- **History:** the same background check builds a 7-day chart per token on the phone.
+- **Home-screen widget:** the latest route cost over xStocks' price for each token, green within your limit.
+- **Share:** a check as an image.
+- **Backing:** xStocks' dated reserve record per token and a Solscan link to the mint.
+- **Wallet:** read-only xStock balances by Mobile Wallet Adapter connect or pasted address.
 
 ## What the app compares
 
@@ -25,7 +36,7 @@ For a local Windows test APK, run `npm run build:apk`. That testing build uses a
 
 The app bundle makes direct HTTPS requests to Jupiter and xStocks, and neither service requires a key for the endpoints used here. Their availability and usage terms can change.
 
-Wallet identity uses `https://closing-bell-eight.vercel.app` solely for Android Digital Asset Links verification. That host serves `/.well-known/assetlinks.json` with the release certificate fingerprint and exact `application/json` MIME type. Its response is cached at the edge to keep verification fast. Market data and wallet holdings do not call that web backend.
+Wallet identity uses `https://guts805.github.io`, a GitHub Pages site published from a separate repository, solely for Android Digital Asset Links verification. It serves `/.well-known/assetlinks.json` with the release certificate fingerprint. Market data and wallet holdings do not call it.
 
 ## Verification
 
