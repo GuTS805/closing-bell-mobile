@@ -48,7 +48,7 @@ export function Shell() {
   const open = (ticker: Ticker, previous: SavedCheck | null = null) => { setRepeatCheck(previous); setStock(ticker); };
 
   return <SafeAreaView style={s.root}><ScrollView key={stock ? `stock:${stock}:${repeatCheck?.id ?? 'new'}` : `tab:${tab}`} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-    <View style={s.header}><Image source={require('../assets/icon.png')} style={s.logo} resizeMode="contain" /><View style={s.flex}><Text style={s.brand}>Closing <Text style={s.brandGold}>Bell.</Text></Text><Text style={s.faint}>TOKEN COST. BACKING. CLEAR LIMITS.</Text></View><Pill title="MAINNET" /></View>
+    <View style={s.header}><Image source={require('../assets/icon.png')} style={s.logo} resizeMode="contain" /><View style={s.flex}><Text style={s.brand} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>Closing <Text style={s.brandGold}>Bell.</Text></Text><Text style={s.faint} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>TOKEN COST. BACKING. CLEAR LIMITS.</Text></View><Pill title="MAINNET" /></View>
     {stock ? <Stock ticker={stock} previous={repeatCheck} watched={watch.includes(stock)} toggle={() => toggle(stock)} back={() => setStock(null)} save={saveCheck} viewChecks={() => { setStock(null); setTab('Checks'); }} /> : <>
       {tab === 'Markets' && <><View style={s.compactHero}><Label>YOUR TOKEN DESK</Label><Text style={s.sectionHeading}>Know what the route costs.</Text><Copy>Compare a Jupiter token quote with xStocks' indicative token price. The issuer does not provide a price timestamp.</Copy></View>
         {[...markets].sort((a, b) => Number(watch.includes(b.ticker)) - Number(watch.includes(a.ticker))).map(m => <MarketRow key={m.ticker} ticker={m.ticker} watched={watch.includes(m.ticker)} last={checks.find(check => check.ticker === m.ticker)} open={() => open(m.ticker)} />)}
@@ -65,7 +65,7 @@ export function Shell() {
       {tab === 'Backing' && <Backing />}
       {tab === 'Wallet' && <Wallet />}
     </>}
-  </ScrollView><View style={s.tabs}>{tabs.map(item => <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: item === tab && !stock }} style={[s.tab, item === tab && !stock && s.activeTab]} onPress={() => { setStock(null); setTab(item); }}><Text style={[s.tabText, item === tab && !stock && s.selected]}>{item}</Text></Pressable>)}</View></SafeAreaView>;
+  </ScrollView><View style={s.tabs}>{tabs.map(item => <Pressable key={item} accessibilityRole="tab" accessibilityState={{ selected: item === tab && !stock }} style={[s.tab, item === tab && !stock && s.activeTab]} onPress={() => { setStock(null); setTab(item); }}><Text style={[s.tabText, item === tab && !stock && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{item}</Text></Pressable>)}</View></SafeAreaView>;
 }
 
 function MarketRow({ ticker, watched, last, open }: { ticker: Ticker; watched: boolean; last?: SavedCheck; open: () => void }) {
@@ -73,7 +73,7 @@ function MarketRow({ ticker, watched, last, open }: { ticker: Ticker; watched: b
   const query = useQuery({ queryKey: ['comparison', ticker, 1000], queryFn: ({ signal }) => getComparison(ticker, 1000, signal) });
   return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${market.name}`} onPress={open} style={({ pressed }) => [s.card, pressed && { borderColor: colors.gold }]}>
     <View style={s.row}><View style={s.badge}><Text style={[s.badgeText, { color: market.color }]}>{market.mark}</Text></View><View style={s.flex}><Text style={s.subtitle}>{ticker}</Text><Text style={s.faint}>{market.name} · {market.underlying} backing{watched ? ' · WATCHING' : ''}</Text></View><Text style={s.back}>↗</Text></View>
-    <View style={s.row}><View style={s.flex}><Text style={s.dataHint}>JUPITER TOKEN QUOTE / $1,000</Text><Text style={s.marketPrice}>{query.data ? usd(query.data.tokenFillPrice) : query.isPending ? 'Reading…' : '—'}</Text></View><Pill title={query.isError ? 'UNAVAILABLE' : 'AGE UNKNOWN'} tone={query.isError ? 'red' : 'gold'} /></View>
+    <View><View style={s.row}><Text style={[s.dataHint, s.flex]}>JUPITER TOKEN QUOTE / $1,000</Text><Pill title={query.isError ? 'UNAVAILABLE' : 'AGE UNKNOWN'} tone={query.isError ? 'red' : 'gold'} /></View><Text style={s.marketPrice} numberOfLines={1} adjustsFontSizeToFit>{query.data ? usd(query.data.tokenFillPrice) : query.isPending ? 'Reading…' : '—'}</Text></View>
     <DataRow label="Issuer indicative token" value={query.data ? usd(query.data.issuerIndicativePrice) : '—'} hint="xStocks · price timestamp not supplied" />
     <DataRow label="Route difference" value={query.data ? percent(query.data.differenceBps) : '—'} hint="Token route versus issuer indicative" accent={!!query.data} />
     {query.data && <Text style={s.faint}>ROUTE REQUESTED {time(query.data.capturedAt).toUpperCase()} · SOURCE AGE UNKNOWN</Text>}
@@ -105,16 +105,16 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
     {previous && <Copy>Previous amount and limit restored. Run a new check to see what changed.</Copy>}
     <Button secondary title={watched ? 'Remove from watchlist' : 'Add to watchlist'} onPress={toggle} />
     <View style={s.card}><View style={s.row}><Label>01 / YOUR LIMIT</Label><Pill title="READ ONLY" tone="muted" /></View>
-      <Text style={s.dataLabel}>Amount to inspect · USDC</Text><TextInput accessibilityLabel="Amount in USDC" style={s.input} value={amount} onChangeText={text => { setAmount(text); setReview(false); setSaved(false); }} keyboardType="decimal-pad" />
+      <Text style={s.dataLabel}>Amount to inspect · USDC</Text><TextInput accessibilityLabel="Amount in USDC" style={s.input} value={amount} onChangeText={text => { setAmount(text.replace(/,/g, '.').replace(/\s/g, '')); setReview(false); setSaved(false); }} keyboardType="decimal-pad" />
       {!valid && <Copy>Enter $100 to $10,000,000 with up to two decimals.</Copy>}
-      <Text style={s.dataLabel}>Maximum above issuer indicative</Text><View style={s.row}>{[10, 25, 50, 100].map(option => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: band === option }} onPress={() => { setBand(option); setReview(false); setSaved(false); }} style={[s.bandOption, band === option && s.bandSelected]}><Text style={[s.bandText, band === option && s.selected]}>{(option / 100).toFixed(2)}%</Text></Pressable>)}</View>
+      <Text style={s.dataLabel}>Maximum above issuer indicative</Text><View style={s.row}>{[10, 25, 50, 100].map(option => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: band === option }} onPress={() => { setBand(option); setReview(false); setSaved(false); }} style={[s.bandOption, band === option && s.bandSelected]}><Text style={[s.bandText, band === option && s.selected]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.3}>{(option / 100).toFixed(2)}%</Text></Pressable>)}</View>
       <Button title="Check this route" disabled={!valid || quote.isFetching} onPress={() => { setReview(true); if (review) void quote.refetch(); }} />
     </View>
     {review && quote.isFetching && <Notice loading message="Reading Jupiter and xStocks…" />}
     {review && quote.isError && <Notice message={quote.error.message} retry={() => void quote.refetch()} />}
     {result && outcome && <View style={[s.card, s.resultCard, outcome === 'above' && s.resultRed]}>
       <View style={s.row}><Label>02 / INDICATIVE RESULT</Label><Pill title={outcome === 'above' ? 'ABOVE LIMIT' : 'INSIDE LIMIT'} tone={outcome === 'above' ? 'red' : 'green'} /></View>
-      <Text style={s.value}>{percent(result.differenceBps)}</Text><Copy>{outcome === 'above' ? 'The quoted token route is above your chosen indicative limit.' : 'The quoted token route is inside your chosen indicative limit.'}</Copy>
+      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{percent(result.differenceBps)}</Text><Copy>{outcome === 'above' ? 'The quoted token route is above your chosen indicative limit.' : 'The quoted token route is inside your chosen indicative limit.'}</Copy>
       <DataRow label="Jupiter token route" value={usd(result.tokenFillPrice)} hint={result.venues.join(', ') || `Solana slot ${result.routeSlot}`} />
       <DataRow label="xStocks indicative token" value={usd(result.issuerIndicativePrice)} hint="Issuer does not supply a price timestamp" />
       <DataRow label="Your indicative ceiling" value={usd(result.issuerIndicativePrice * (1 + band / 10_000))} hint={`Issuer indicative + ${(band / 100).toFixed(2)}%`} accent />
@@ -172,7 +172,7 @@ function Wallet() {
     {query.isPending && effective && <Notice loading message="Reading Solana token accounts…" />}
     {query.isError && <Notice message={query.error.message} retry={() => void query.refetch()} />}
     {query.data && <>{query.data.length === 0 && <Notice message="No supported xStocks found at this address." />}
-      {query.data.map(position => <View key={position.ticker} style={s.card}><Label>{position.ticker} / ON-CHAIN</Label><Text style={s.subtitle}>{position.label}</Text><Text style={s.value}>{position.qty.toLocaleString('en-US', { maximumFractionDigits: 6 })}</Text><Copy>Token quantity. No cash valuation is implied.</Copy></View>)}
+      {query.data.map(position => <View key={position.ticker} style={s.card}><Label>{position.ticker} / ON-CHAIN</Label><Text style={s.subtitle}>{position.label}</Text><Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{position.qty.toLocaleString('en-US', { maximumFractionDigits: 6 })}</Text><Copy>Token quantity. No cash valuation is implied.</Copy></View>)}
       <Button secondary title="Refresh holdings" onPress={() => void query.refetch()} /></>}
     <Text style={s.faint}>RPC {RPC_URL}</Text>
   </>;

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Closing Bell",
     "slug": "closing-bell-mobile",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.closingbell.mobile",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#0b0e10",
         "foregroundImage": "./assets/icon.png"

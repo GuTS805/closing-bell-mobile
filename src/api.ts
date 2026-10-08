@@ -18,21 +18,32 @@ export const reserveSchema = z.object({ symbol: z.string(), timestamp: z.string(
 export type Reserve = z.infer<typeof reserveSchema>;
 export type Comparison = { ticker: Ticker; amount: number; tokenFillPrice: number; issuerIndicativePrice: number; differenceBps: number; routeSlot: number; venues: string[]; capturedAt: string };
 
-async function readJson<T>(url: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
+async function readJson<T>(source: string, url: string, schema: z.ZodType<T>, signal?: AbortSignal, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort);
   if (signal?.aborted) controller.abort();
   const timeout = setTimeout(abort, 15_000);
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error(`Market source unavailable (${response.status}).`);
-    const parsed = schema.safeParse(await response.json());
-    if (!parsed.success) throw new Error('Market source returned incomplete data. Try again.');
+    let response: Response;
+    try { response = await fetch(url, { ...init, signal: controller.signal, headers: { Accept: 'application/json', ...init?.headers } }); }
+    catch (error) {
+      if (signal?.aborted) throw error;
+      if (controller.signal.aborted) throw new Error(`${source} took too long to respond. Try again.`);
+      throw new Error(`Could not reach ${source}. Check your internet connection and try again.`);
+    }
+    if (response.status === 429) throw new Error(`${source} is limiting requests. Wait a minute and try again.`);
+    if (!response.ok) throw new Error(`${source} is unavailable right now (HTTP ${response.status}). Try again later.`);
+    let body: unknown;
+    try { body = await response.json(); }
+    catch (error) {
+      if (signal?.aborted) throw error;
+      if (controller.signal.aborted) throw new Error(`${source} took too long to respond. Try again.`);
+      throw new Error(`${source} returned an unreadable response. If you are on Wi-Fi that needs a sign-in, open a browser first.`);
+    }
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) throw new Error(`${source} returned incomplete data. Try again.`);
     return parsed.data;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError' && !signal?.aborted) throw new Error('Market source took too long. Try again.');
-    throw error;
   } finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); }
 }
 
@@ -41,7 +52,7 @@ export async function getComparison(ticker: Ticker, amount: number, signal?: Abo
   const market = marketFor(ticker);
   const rawAmount = Math.round(amount * 1_000_000);
   const routeUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${USDC}&outputMint=${market.mint}&amount=${rawAmount}&slippageBps=50`;
-  const [issuer, route] = await Promise.all([readJson(`${XSTOCKS}/assets/${ticker}/price-data`, issuerSchema, signal), readJson(routeUrl, routeSchema, signal)]);
+  const [issuer, route] = await Promise.all([readJson('xStocks', `${XSTOCKS}/assets/${ticker}/price-data`, issuerSchema, signal), readJson('Jupiter', routeUrl, routeSchema, signal)]);
   const output = Number(route.outAmount) / 10 ** market.decimals;
   if (!Number.isFinite(output) || output <= 0) throw new Error('The route returned an invalid token amount.');
   const tokenFillPrice = amount / output;
@@ -52,31 +63,23 @@ export async function getComparison(ticker: Ticker, amount: number, signal?: Abo
 }
 
 export async function getReserve(ticker: Ticker, signal?: AbortSignal): Promise<Reserve> {
-  const reserve = await readJson(`${XSTOCKS}/proof-of-reserves/${ticker}`, reserveSchema, signal);
+  const reserve = await readJson('xStocks', `${XSTOCKS}/proof-of-reserves/${ticker}`, reserveSchema, signal);
   if (reserve.symbol !== ticker || !Number.isFinite(Date.parse(reserve.timestamp)) ||
     ![reserve.sharesHeld, reserve.circulatingSupply].every(value => Number.isFinite(Number(value)) && Number(value) >= 0)) throw new Error('Issuer reserve record was incomplete.');
   return reserve;
 }
 
-const rpcSchema = z.object({ result: z.object({ value: z.array(z.object({ account: z.object({ data: z.object({ parsed: z.object({ info: z.object({ mint: z.string(), tokenAmount: z.object({ uiAmountString: z.string() }) }) }) }) }) })) }), error: z.unknown().optional() });
+const rpcSchema = z.object({ result: z.object({ value: z.array(z.object({ account: z.object({ data: z.object({ parsed: z.object({ info: z.object({ mint: z.string(), tokenAmount: z.object({ uiAmountString: z.string() }) }) }) }) }) })) }) });
+const rpcErrorSchema = z.object({ error: z.object({ message: z.string() }) });
 export async function getPositions(address: string, signal?: AbortSignal) {
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  signal?.addEventListener('abort', abort);
-  if (signal?.aborted) controller.abort();
-  const timeout = setTimeout(abort, 15_000);
-  try {
-    const response = await fetch(RPC_URL, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner', params: [address, { programId: TOKEN_2022 }, { encoding: 'jsonParsed' }] }) });
-    if (!response.ok) throw new Error(`Solana RPC unavailable (${response.status}).`);
-    const parsed = rpcSchema.safeParse(await response.json());
-    if (!parsed.success || parsed.data.error) throw new Error('Could not read token holdings from Solana.');
-    return markets.flatMap(market => {
-      const qty = parsed.data.result.value.filter(item => item.account.data.parsed.info.mint === market.mint)
-        .reduce((sum, item) => sum + Number(item.account.data.parsed.info.tokenAmount.uiAmountString), 0);
-      return qty > 0 ? [{ ticker: market.ticker, label: market.name, qty }] : [];
-    });
-  } finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); }
+  const parsed = await readJson('Solana RPC', RPC_URL, rpcSchema.or(rpcErrorSchema), signal, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner', params: [address, { programId: TOKEN_2022 }, { encoding: 'jsonParsed' }] }) });
+  if (!('result' in parsed)) throw new Error(/invalid param/i.test(parsed.error.message) ? 'That is not a valid Solana address.' : 'Solana RPC could not read token holdings. Try again.');
+  return markets.flatMap(market => {
+    const qty = parsed.result.value.filter(item => item.account.data.parsed.info.mint === market.mint)
+      .reduce((sum, item) => sum + Number(item.account.data.parsed.info.tokenAmount.uiAmountString), 0);
+    return qty > 0 ? [{ ticker: market.ticker, label: market.name, qty }] : [];
+  });
 }
 
 export const usd = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

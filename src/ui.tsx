@@ -21,11 +21,11 @@ export function Button({ title, onPress, disabled, secondary }: { title: string;
 
 export function Pill({ title, tone = 'gold' }: { title: string; tone?: 'gold' | 'green' | 'red' | 'muted' }) {
   const color = tone === 'green' ? colors.green : tone === 'red' ? colors.red : tone === 'muted' ? colors.faint : colors.gold;
-  return <View style={[s.pill, { borderColor: `${color}44` }]}><View style={[s.pillDot, { backgroundColor: color }]} /><Text style={[s.pillText, { color }]}>{title}</Text></View>;
+  return <View style={[s.pill, { borderColor: `${color}44` }]}><View style={[s.pillDot, { backgroundColor: color }]} /><Text style={[s.pillText, { color }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{title}</Text></View>;
 }
 
 export function DataRow({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
-  return <View style={s.dataRow}><View style={s.flex}><Text style={s.dataLabel}>{label}</Text>{hint && <Text style={s.dataHint}>{hint}</Text>}</View><Text style={[s.dataValue, accent && { color: colors.goldBright }]}>{value}</Text></View>;
+  return <View style={s.dataRow}><View style={s.flex}><Text style={s.dataLabel}>{label}</Text>{hint && <Text style={s.dataHint}>{hint}</Text>}</View><Text style={[s.dataValue, accent && { color: colors.goldBright }]} numberOfLines={1}>{value}</Text></View>;
 }
 
 export function Notice({ message, loading, retry }: { message: string; loading?: boolean; retry?: () => void }) {

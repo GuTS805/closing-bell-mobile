@@ -81,7 +81,8 @@ try {
     } finally { Pop-Location }
     $artifactDir = Join-Path $projectRoot 'artifacts'
     New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-    $apk = Join-Path $artifactDir $(if ($Release) { 'closing-bell-0.1.0-release.apk' } else { 'closing-bell-0.1.0.apk' })
+    $version = (Get-Content -LiteralPath (Join-Path $projectRoot 'package.json') -Raw | ConvertFrom-Json).version
+    $apk = Join-Path $artifactDir $(if ($Release) { "closing-bell-$version-release.apk" } else { "closing-bell-$version.apk" })
     Copy-Item -LiteralPath (Join-Path $projectRoot 'android/app/build/outputs/apk/release/app-release.apk') -Destination $apk
     Write-Output $apk
 } finally {
