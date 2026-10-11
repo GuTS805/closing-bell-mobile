@@ -41,11 +41,12 @@ export function ProtectCard({ result, band }: { result: Comparison; band: number
     </View>;
   }
   return <View style={[s.card, s.resultGreen]}>
-    <View style={s.row}><Label>03 / PROTECT THIS SWAP</Label><Pill title="ENFORCED ON-CHAIN" tone="green" /></View>
+    <View style={s.row}><Label>03 / PROTECT THIS SWAP</Label><Pill title="ON-CHAIN" tone="green" /></View>
     <Text style={s.subtitle}>Swap in Jupiter with these two settings.</Text>
     <DataRow label="Max slippage" value={`${(protection.maxSlippageBps / 100).toFixed(2)}%`} hint="Swap settings → manual slippage" accent />
     <DataRow label="Minimum received" value={`${tokens(protection.minTokens)} ${result.ticker}`} hint={`For ${usd(result.amount)}. Check Jupiter shows at least this.`} accent />
     <Copy>{`If the price runs past ${usd(protection.ceiling)} per token before your swap lands, Jupiter's on-chain check cancels it and your USDC stays in your wallet. Closing Bell never signs or moves funds.`}</Copy>
+    {!result.issuerLive && <Text style={s.faint}>SET FROM XSTOCKS' LAST PRICE WHILE THE US MARKET IS CLOSED</Text>}
     <Button title={`Open ${result.ticker} swap in Jupiter`} onPress={openJupiter} />
     <Button secondary title="Copy minimum received" onPress={() => { void copyMinimum(); }} />
     {note !== '' && <Text style={s.faint}>{note}</Text>}

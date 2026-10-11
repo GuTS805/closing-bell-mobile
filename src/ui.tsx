@@ -35,7 +35,7 @@ export function Notice({ message, loading, retry }: { message: string; loading?:
 export const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 40, gap: 18 },
-  label: { color: colors.gold, fontSize: 10, fontFamily: font.bold, letterSpacing: 1.8, textTransform: 'uppercase' },
+  label: { flexShrink: 1, color: colors.gold, fontSize: 10, fontFamily: font.bold, letterSpacing: 1.8, textTransform: 'uppercase' },
   title: { color: colors.ink, fontSize: 36, lineHeight: 40, fontFamily: font.display, letterSpacing: -1.5 },
   subtitle: { color: colors.ink, fontSize: 18, lineHeight: 24, fontFamily: font.display, letterSpacing: -0.4 },
   copy: { color: colors.muted, fontSize: 13, lineHeight: 20, fontFamily: font.regular },

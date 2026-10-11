@@ -5,6 +5,12 @@ import { markets, Ticker } from '../api';
 export type WidgetRow = { ticker: Ticker; bps: number | null; limitBps: number };
 
 const colors = { bg: '#0b0e10', card: '#14181b', ink: '#f5f6f7', faint: '#939da8', gold: '#f2c84b', green: '#32db8a', red: '#f07870' } as const;
+/** Time for today's samples; weekday and time once they are older, e.g. across a market-closed weekend. */
+const updatedLabel = (at: number) => {
+  const date = new Date(at);
+  const clock = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toDateString() === new Date().toDateString() ? clock : `${date.toLocaleDateString([], { weekday: 'short' })} ${clock}`;
+};
 const pct = (bps: number) => `${bps >= 0 ? '+' : ''}${(bps / 100).toFixed(2)}%`;
 
 /** Home-screen view of the latest $1,000 route cost over xStocks' price, per token. */
@@ -23,7 +29,7 @@ export function RouteWidget({ rows, updatedAt }: { rows: WidgetRow[]; updatedAt:
         </FlexWidget>;
       })}
     </FlexWidget>
-    <TextWidget text={updatedAt ? `Updated ${new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · green = within your limit` : 'Open the app to load prices'} style={{ fontSize: 9, fontFamily: 'Inter_500Medium', color: colors.faint }} />
+    <TextWidget text={updatedAt ? `Updated ${updatedLabel(updatedAt)} · green = within your limit` : 'Open the app to load prices'} style={{ fontSize: 9, fontFamily: 'Inter_500Medium', color: colors.faint }} />
   </FlexWidget>;
 }
 

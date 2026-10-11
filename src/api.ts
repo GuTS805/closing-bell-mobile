@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 
 export const RPC_URL = process.env.EXPO_PUBLIC_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
@@ -12,11 +13,48 @@ export const markets = [
 ] as const;
 export type Ticker = typeof markets[number]['ticker'];
 export const marketFor = (ticker: Ticker) => markets.find(m => m.ticker === ticker)!;
-const issuerSchema = z.object({ quote: z.number().finite().positive() });
+// xStocks returns { quote: null } while the US market is closed (weekends on its 24/5 schedule).
+const issuerSchema = z.object({ quote: z.number().finite().positive().nullable() });
 const routeSchema = z.object({ outAmount: z.string().regex(/^\d+$/), contextSlot: z.number().int().nonnegative(), routePlan: z.array(z.object({ swapInfo: z.object({ label: z.string() }) })).optional() });
 export const reserveSchema = z.object({ symbol: z.string(), timestamp: z.string().datetime(), sharesHeld: z.string(), circulatingSupply: z.string(), holdings: z.array(z.object({ provider: z.string(), quantity: z.string(), symbol: z.string() })) });
 export type Reserve = z.infer<typeof reserveSchema>;
-export type Comparison = { ticker: Ticker; amount: number; tokensOut: number; tokenFillPrice: number; issuerIndicativePrice: number; differenceBps: number; routeSlot: number; venues: string[]; capturedAt: string };
+/** issuerLive is false when xStocks has paused its price and the comparison uses the last one this phone read, at issuerAt. */
+export type Comparison = { ticker: Ticker; amount: number; tokensOut: number; tokenFillPrice: number; issuerIndicativePrice: number; issuerLive: boolean; issuerAt: string; differenceBps: number; routeSlot: number; venues: string[]; capturedAt: string };
+
+/** Thrown while xStocks' price is paused and this phone has never read one for the token; still carries Jupiter's live price. */
+export class MarketClosedError extends Error {
+  constructor(readonly ticker: Ticker, readonly tokensOut: number, readonly tokenFillPrice: number) {
+    super(`xStocks pauses its price while the US market is closed, and this phone hasn't read one for ${ticker} yet. Jupiter's live price is ${usd(tokenFillPrice)} per token; the comparison returns when the market reopens.`);
+    this.name = 'MarketClosedError';
+  }
+}
+
+const lastIssuerKey = 'issuer-last-v1';
+/** Older issuer prices are too stale to compare against, even with a label. */
+const lastIssuerMaxMs = 7 * 86_400_000;
+type IssuerRead = { price: number; at: number };
+
+async function rememberIssuer(ticker: Ticker, read: IssuerRead) {
+  try {
+    const raw = await AsyncStorage.getItem(lastIssuerKey);
+    const stored: Record<string, IssuerRead> = raw ? JSON.parse(raw) : {};
+    await AsyncStorage.setItem(lastIssuerKey, JSON.stringify({ ...stored, [ticker]: read }));
+  } catch { /* The comparison itself doesn't depend on the cache. */ }
+}
+
+/** The newest issuer price this phone read for the token, from the cache or the background history. */
+async function lastIssuer(ticker: Ticker, now: number): Promise<IssuerRead | null> {
+  const reads: IssuerRead[] = [];
+  try {
+    const [[, cached], [, history]] = await AsyncStorage.multiGet([lastIssuerKey, 'history-v1']);
+    const read = cached ? JSON.parse(cached)?.[ticker] : null;
+    if (read) reads.push(read);
+    const samples = history ? JSON.parse(history)?.[ticker] : null;
+    if (Array.isArray(samples)) for (const sample of samples) if (sample) reads.push({ price: sample.issuer, at: sample.t });
+  } catch { return null; }
+  const valid = reads.filter(read => Number.isFinite(read?.price) && read.price > 0 && Number.isFinite(read?.at) && now - read.at <= lastIssuerMaxMs);
+  return valid.length ? valid.reduce((a, b) => (b.at > a.at ? b : a)) : null;
+}
 
 async function readJson<T>(source: string, url: string, schema: z.ZodType<T>, signal?: AbortSignal, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
@@ -56,10 +94,15 @@ export async function getComparison(ticker: Ticker, amount: number, signal?: Abo
   const output = Number(route.outAmount) / 10 ** market.decimals;
   if (!Number.isFinite(output) || output <= 0) throw new Error('The route returned an invalid token amount.');
   const tokenFillPrice = amount / output;
-  const differenceBps = (tokenFillPrice / issuer.quote - 1) * 10_000;
+  const now = Date.now();
+  let reference: IssuerRead | null = issuer.quote === null ? null : { price: issuer.quote, at: now };
+  if (reference) await rememberIssuer(ticker, reference);
+  else reference = await lastIssuer(ticker, now);
+  if (!reference) throw new MarketClosedError(ticker, output, tokenFillPrice);
+  const differenceBps = (tokenFillPrice / reference.price - 1) * 10_000;
   if (!Number.isFinite(differenceBps)) throw new Error('Could not compare these prices.');
-  return { ticker, amount, tokensOut: output, tokenFillPrice, issuerIndicativePrice: issuer.quote, differenceBps,
-    routeSlot: route.contextSlot, venues: [...new Set((route.routePlan ?? []).map(hop => hop.swapInfo.label))], capturedAt: new Date().toISOString() };
+  return { ticker, amount, tokensOut: output, tokenFillPrice, issuerIndicativePrice: reference.price, issuerLive: issuer.quote !== null, issuerAt: new Date(reference.at).toISOString(), differenceBps,
+    routeSlot: route.contextSlot, venues: [...new Set((route.routePlan ?? []).map(hop => hop.swapInfo.label))], capturedAt: new Date(now).toISOString() };
 }
 
 const tradingSchema = z.object({ trading: z.object({ currentPeriod: z.string(), openNow: z.boolean(), nextChangeAt: z.string().datetime().nullable().optional() }) });

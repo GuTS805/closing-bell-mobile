@@ -6,7 +6,7 @@ import { MobileWalletProvider, WalletAuthorization, WalletAuthorizationCache } f
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Shell } from './src/Shell';
 import * as Notifications from 'expo-notifications';
-import { RPC_URL } from './src/api';
+import { MarketClosedError, RPC_URL } from './src/api';
 
 // Alerts that arrive while the app is open still show as a banner.
 Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }) });
@@ -16,7 +16,7 @@ export default function App() {
     const subscription = AppState.addEventListener('change', state => focusManager.setFocused(state === 'active'));
     return () => subscription.remove();
   }, []);
-  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } }));
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: (count, error) => count < 2 && !(error instanceof MarketClosedError), staleTime: 30_000 } } }));
   const [cache] = useState<WalletAuthorizationCache>(() => {
     let authorization: WalletAuthorization | undefined;
     return { get: async () => authorization, set: async value => { authorization = value; }, clear: async () => { authorization = undefined; } };

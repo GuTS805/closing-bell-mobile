@@ -74,13 +74,15 @@ export async function notifyWithin(alert: RouteAlert, result: Comparison) {
  */
 export async function sweep(signal?: AbortSignal) {
   const settled = await Promise.allSettled(markets.map(m => getComparison(m.ticker, referenceAmount, signal)));
-  const samples = settled.flatMap(item => item.status === 'fulfilled' ? [item.value] : []);
+  // While xStocks' price is paused, comparisons against its last price stay out of history and alerts.
+  const samples = settled.flatMap(item => item.status === 'fulfilled' && item.value.issuerLive ? [item.value] : []);
   await recordSamples(samples);
   const alerts = await readAlerts();
   if (!alerts.length) return samples;
   const next = await Promise.all(alerts.map(async alert => {
     try {
       const result = alert.amount === referenceAmount ? samples.find(sample => sample.ticker === alert.ticker) ?? await getComparison(alert.ticker, alert.amount, signal) : await getComparison(alert.ticker, alert.amount, signal);
+      if (!result.issuerLive) return alert;
       const { within, notify } = nextAlertState(alert, result.differenceBps);
       if (notify) await notifyWithin(alert, result);
       return { ...alert, within };

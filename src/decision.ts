@@ -15,6 +15,6 @@ export function ageLabel(iso: string, now = Date.now()) {
   if (!Number.isFinite(age) || age < -30) return 'unknown age';
   if (age >= 86_400) return `${Math.floor(age / 86_400)}d old`;
   if (age >= 3_600) return `${Math.floor(age / 3_600)}h old`;
-  if (age >= 60) return `${Math.floor(age / 60)}m old`;
-  return `${Math.max(0, Math.round(age))}s old`;
+  if (age >= 60) return `${Math.floor(age / 60)} min old`;
+  return `${Math.max(0, Math.round(age))} sec old`;
 }
