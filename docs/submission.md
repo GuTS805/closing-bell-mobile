@@ -8,7 +8,7 @@ It runs entirely on the phone: direct calls to Jupiter, xStocks and Solana RPC, 
 
 ## Try it in two minutes
 
-1. Install the APK (Android 7.0+) from the [v0.2.0 release](https://github.com/GuTS805/closing-bell-mobile/releases/tag/v0.2.0). A three-screen intro explains the idea.
+1. Install the APK (Android 7.0+) from the [v0.2.1 release](https://github.com/GuTS805/closing-bell-mobile/releases/tag/v0.2.1). A three-screen intro explains the idea.
 2. **Markets:** Jupiter's price for $1,000 of SPYx, AAPLx, NVDAx and TSLAx next to xStocks' price, and how far over it you'd pay.
 3. Open **SPYx**, enter an amount, pick a limit and tap **Check Jupiter's price**.
 4. **Within your limit:** the app shows the max slippage and minimum received to set, and opens Jupiter's swap with USDC → SPYx filled in. If the price moves past your limit price before the swap lands, Jupiter's minimum-output check reverts it.

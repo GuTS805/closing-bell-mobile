@@ -1,5 +1,19 @@
 # Android emulator QA
 
+## October 12 v0.2.1 pass: market-closed weekends
+
+On the phone, v0.2.0 showed every market as `UNAVAILABLE` with `xStocks returned incomplete data` over the weekend. xStocks trades 24/5, and while the US market is closed its `price-data` endpoint returns `{"quote":null}` for every token. The app treated that as a failure and also hid Jupiter's live price.
+
+| Area | Result |
+| --- | --- |
+| Closed, phone with earlier reads | Markets show Jupiter's live price and compare it with the last xStocks price the phone read, labelled with its time (SPYx $784.09 vs $778.60 read October 10, +0.71%). |
+| Closed, fresh install (emulator) | With no earlier read, each market shows Jupiter's live price, `MARKET CLOSED` and `Paused` instead of an error. |
+| Check and protect while closed | TSLAx $100 at 1.00%: within the limit; the result and protect cards say xStocks' last price was used. |
+| History and alerts | Comparisons against a paused price are not recorded and do not trigger alerts. |
+| Transient errors | A first-launch Jupiter HTTP 503 on the emulator cleared on relaunch; queries now retry twice (not for a paused price). |
+| Layout | The protect card's `ON-CHAIN` pill no longer overflows; reserve age reads `14 MIN OLD` instead of `14M OLD`. |
+| Stability | No ReactNativeJS or AndroidRuntime errors; 10 unit tests pass; the APK verifies with the release certificate. |
+
 ## October 9 v0.2.0 pass: protect, alerts, history, widget, share
 
 Physical phone: Android 13 arm64 (model IV2201). Emulator: Android 16 Google APIs x86_64, headless. Screenshots are local in `artifacts/qa/phone/` and `artifacts/qa/oct9/` (ignored by Git); screens of the phone's personal home pages were deleted and are not part of the record.
