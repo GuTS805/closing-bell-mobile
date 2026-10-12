@@ -1,5 +1,17 @@
 # Android emulator QA
 
+## October 12 v0.2.2 pass: demo recording
+
+Fresh install on the Android 16 emulator while recording the demo video.
+
+| Area | Result |
+| --- | --- |
+| Launch | Android 12+ drew a white splash and a white window before the dark app. Both now use the app background. |
+| First launch | Every market showed `UNAVAILABLE` (Jupiter HTTP 503) on one cold start while the same request returned 200 from a PC. Gateway errors now retry twice with a short backoff, and the launch sweep waits for the market cards; the next fresh install loaded all four markets. |
+| Widget | A tiny negative gap showed `-0.00%`. Gaps now round to whole basis points first (unit tested). The picker preview is a capture of the live widget. |
+| Flow | Intro, markets, $1,000 SPYx at 1.00% (within, max slippage 0.39%, minimum 1.27246 SPYx), 0.10% (over, alert on after the notification prompt), save, Checks, Backing, widget pin and home-screen widget all recorded without errors. |
+| Tests | `npm test`: 11 passing. |
+
 ## October 12 v0.2.1 pass: market-closed weekends
 
 On the phone, v0.2.0 showed every market as `UNAVAILABLE` with `xStocks returned incomplete data` over the weekend. xStocks trades 24/5, and while the US market is closed its `price-data` endpoint returns `{"quote":null}` for every token. The app treated that as a failure and also hid Jupiter's live price.

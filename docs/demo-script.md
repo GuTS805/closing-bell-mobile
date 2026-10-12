@@ -2,7 +2,7 @@
 
 Record on the phone with Android's screen recorder, portrait, notifications silenced (Do Not Disturb), battery saver off. Speak the lines or add them as captions. Times are targets.
 
-**Before recording:** install v0.2.1, clear app data once so the intro shows, place the widget on an empty home page, remove any personal apps from that page, and keep Solflare installed. Do not show the Solflare recovery phrase screen.
+**Before recording:** install v0.2.2, clear app data once so the intro shows, place the widget on an empty home page, remove any personal apps from that page, and keep Solflare installed. Do not show the Solflare recovery phrase screen.
 
 | Time | On screen | Say |
 | --- | --- | --- |
