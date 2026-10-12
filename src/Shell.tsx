@@ -63,6 +63,8 @@ export function Shell() {
     void (async () => {
       const last = await lastSweep();
       if (last && Date.now() - last < 600_000) return;
+      // Let the market cards' own requests go first rather than doubling the burst on launch.
+      await new Promise(resolve => setTimeout(resolve, 8_000));
       await sweep();
       await refreshWidget();
       await client.invalidateQueries({ queryKey: ['history'] });

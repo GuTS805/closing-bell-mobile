@@ -64,11 +64,17 @@ async function readJson<T>(source: string, url: string, schema: z.ZodType<T>, si
   const timeout = setTimeout(abort, 15_000);
   try {
     let response: Response;
-    try { response = await fetch(url, { ...init, signal: controller.signal, headers: { Accept: 'application/json', ...init?.headers } }); }
-    catch (error) {
-      if (signal?.aborted) throw error;
-      if (controller.signal.aborted) throw new Error(`${source} took too long to respond. Try again.`);
-      throw new Error(`Could not reach ${source}. Check your internet connection and try again.`);
+    // Gateway errors (seen from Jupiter on a cold start) usually clear within a second or two, so retry them here.
+    for (let attempt = 0; ; attempt++) {
+      try { response = await fetch(url, { ...init, signal: controller.signal, headers: { Accept: 'application/json', ...init?.headers } }); }
+      catch (error) {
+        if (signal?.aborted) throw error;
+        if (controller.signal.aborted) throw new Error(`${source} took too long to respond. Try again.`);
+        throw new Error(`Could not reach ${source}. Check your internet connection and try again.`);
+      }
+      if (![502, 503, 504].includes(response.status) || attempt === 2) break;
+      await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+      if (controller.signal.aborted) throw signal?.aborted ? new Error('Aborted') : new Error(`${source} took too long to respond. Try again.`);
     }
     if (response.status === 429) throw new Error(`${source} is limiting requests. Wait a minute and try again.`);
     if (!response.ok) throw new Error(`${source} is unavailable right now (HTTP ${response.status}). Try again later.`);
