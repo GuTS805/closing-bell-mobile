@@ -155,7 +155,7 @@ export async function getPositions(address: string, signal?: AbortSignal) {
 }
 
 export const usd = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-export const percent = (bps: number) => `${bps >= 0 ? '+' : ''}${(bps / 100).toFixed(2)}%`;
+export { percent } from './format';
 /** The gap in words for sentences and pills: "0.61% over", or "0.08% under" when Jupiter is cheaper. */
 export const isUnder = (bps: number) => bps <= -0.5;
 export const gapWords = (bps: number) => `${(Math.abs(bps) / 100).toFixed(2)}% ${isUnder(bps) ? 'under' : 'over'}`;

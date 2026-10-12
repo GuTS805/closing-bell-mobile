@@ -1,6 +1,6 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
-import { markets, Ticker } from '../api';
+import { markets, percent, Ticker } from '../api';
 
 export type WidgetRow = { ticker: Ticker; bps: number | null; limitBps: number };
 
@@ -11,7 +11,6 @@ const updatedLabel = (at: number) => {
   const clock = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return date.toDateString() === new Date().toDateString() ? clock : `${date.toLocaleDateString([], { weekday: 'short' })} ${clock}`;
 };
-const pct = (bps: number) => `${bps >= 0 ? '+' : ''}${(bps / 100).toFixed(2)}%`;
 
 /** Home-screen view of the latest $1,000 route cost over xStocks' price, per token. */
 export function RouteWidget({ rows, updatedAt }: { rows: WidgetRow[]; updatedAt: number | null }) {
@@ -25,7 +24,7 @@ export function RouteWidget({ rows, updatedAt }: { rows: WidgetRow[]; updatedAt:
         const tone = row.bps === null ? colors.faint : row.bps <= row.limitBps ? colors.green : colors.red;
         return <FlexWidget key={row.ticker} style={{ backgroundColor: colors.card, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 6, flexDirection: 'column', alignItems: 'center', flex: 1, marginHorizontal: 2 }}>
           <TextWidget text={row.ticker} style={{ fontSize: 11, fontFamily: 'Inter_600SemiBold', color: colors.faint }} />
-          <TextWidget text={row.bps === null ? '—' : pct(row.bps)} maxLines={1} style={{ fontSize: 13, fontFamily: 'Manrope_700Bold', color: tone }} />
+          <TextWidget text={row.bps === null ? '—' : percent(row.bps)} maxLines={1} style={{ fontSize: 13, fontFamily: 'Manrope_700Bold', color: tone }} />
         </FlexWidget>;
       })}
     </FlexWidget>
