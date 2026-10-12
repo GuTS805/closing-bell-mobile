@@ -22,6 +22,7 @@ Evening pass on the phone, US extended hours with live xStocks prices:
 | Check, save, share | SPYx $100 at 0.10%: over the limit, `DON'T SWAP YET`, existing alert shown; save added it to Checks; share opened the Android share sheet. |
 | History | 155 background samples since October 9 for SPYx, +0.56% to +0.79%. |
 | Backing | NVDAx and TSLAx reserve reads once timed out on the phone while the endpoint answered in under 2 s from a PC. The last good record is now kept on the phone and shown, dated, if xStocks can't be reached. |
+| Wallet (Solflare) | Connect from the Wallet tab opened Solflare's request for `Closing Bell` at `guts805.github.io` with no unverified-domain warning, so the new identity host works despite its `charset=utf-8` content type. After approval the app showed the address and `No supported xStocks found at this address`. No signing was requested. Solflare shows a generic globe because the identity host has no app icon yet. |
 
 ## October 9 v0.2.0 pass: protect, alerts, history, widget, share
 
@@ -42,7 +43,7 @@ Physical phone: Android 13 arm64 (model IV2201). Emulator: Android 16 Google API
 | Tests | `npm test`: 10 passing (protection invariant over 5,000 random cases, alert transitions). |
 | Stability | No Closing Bell entry in the phone's crash log. |
 
-Not yet re-run on v0.2.0: Solflare connect against the new identity host `guts805.github.io` (that host serves `application/json; charset=utf-8`).
+Solflare connect against the new identity host `guts805.github.io` was re-run on v0.2.1 on October 12; see that section.
 
 ## October 8 physical phone and production wallet pass (v0.1.1 → v0.1.2)
 
