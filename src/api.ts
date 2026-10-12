@@ -113,11 +113,26 @@ export async function getMarketSession(signal?: AbortSignal): Promise<MarketSess
   return { period: trading.currentPeriod, openNow: trading.openNow, nextChangeAt: trading.nextChangeAt ?? null };
 }
 
-export async function getReserve(ticker: Ticker, signal?: AbortSignal): Promise<Reserve> {
-  const reserve = await readJson('xStocks', `${XSTOCKS}/proof-of-reserves/${ticker}`, reserveSchema, signal);
-  if (reserve.symbol !== ticker || !Number.isFinite(Date.parse(reserve.timestamp)) ||
-    ![reserve.sharesHeld, reserve.circulatingSupply].every(value => Number.isFinite(Number(value)) && Number(value) >= 0)) throw new Error('Issuer reserve record was incomplete.');
-  return reserve;
+/** saved is true when xStocks couldn't be reached and this is the last record the phone read; its timestamp still dates it. */
+export async function getReserve(ticker: Ticker, signal?: AbortSignal): Promise<Reserve & { saved: boolean }> {
+  const key = `reserve-v1:${ticker}`;
+  try {
+    const reserve = await readJson('xStocks', `${XSTOCKS}/proof-of-reserves/${ticker}`, reserveSchema, signal);
+    if (reserve.symbol !== ticker || !Number.isFinite(Date.parse(reserve.timestamp)) ||
+      ![reserve.sharesHeld, reserve.circulatingSupply].every(value => Number.isFinite(Number(value)) && Number(value) >= 0)) throw new Error('Issuer reserve record was incomplete.');
+    AsyncStorage.setItem(key, JSON.stringify(reserve)).catch(() => undefined);
+    return { ...reserve, saved: false };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    let saved: Reserve | null = null;
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const parsed = raw ? reserveSchema.safeParse(JSON.parse(raw)) : null;
+      saved = parsed?.success ? parsed.data : null;
+    } catch { /* Fall through to the network error. */ }
+    if (saved) return { ...saved, saved: true };
+    throw error;
+  }
 }
 
 const rpcSchema = z.object({ result: z.object({ value: z.array(z.object({ account: z.object({ data: z.object({ parsed: z.object({ info: z.object({ mint: z.string(), tokenAmount: z.object({ uiAmountString: z.string() }) }) }) }) }) })) }) });
@@ -135,3 +150,6 @@ export async function getPositions(address: string, signal?: AbortSignal) {
 
 export const usd = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const percent = (bps: number) => `${bps >= 0 ? '+' : ''}${(bps / 100).toFixed(2)}%`;
+/** The gap in words for sentences and pills: "0.61% over", or "0.08% under" when Jupiter is cheaper. */
+export const isUnder = (bps: number) => bps <= -0.5;
+export const gapWords = (bps: number) => `${(Math.abs(bps) / 100).toFixed(2)}% ${isUnder(bps) ? 'under' : 'over'}`;

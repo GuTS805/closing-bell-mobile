@@ -3,7 +3,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { z } from 'zod';
-import { Comparison, getComparison, markets, percent, Ticker, usd } from './api';
+import { Comparison, gapWords, getComparison, markets, Ticker, usd } from './api';
 import { nextAlertState } from './alertState';
 
 const alertsKey = 'alerts-v1';
@@ -61,7 +61,7 @@ export async function notifyWithin(alert: RouteAlert, result: Comparison) {
   await Notifications.scheduleNotificationAsync({
     content: {
       title: `${alert.ticker} is within your ${(alert.band / 100).toFixed(2)}% limit`,
-      body: `Jupiter is ${percent(result.differenceBps)} over xStocks' price for ${usd(alert.amount)}. Open Closing Bell to protect the swap.`,
+      body: `Jupiter is ${gapWords(result.differenceBps)} xStocks' price for ${usd(alert.amount)}. Open Closing Bell to protect the swap.`,
       data: { ticker: alert.ticker },
     },
     trigger: null,

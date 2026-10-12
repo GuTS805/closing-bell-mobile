@@ -18,7 +18,7 @@ export function RouteWidget({ rows, updatedAt }: { rows: WidgetRow[]; updatedAt:
   return <FlexWidget clickAction="OPEN_APP" style={{ height: 'match_parent', width: 'match_parent', backgroundColor: colors.bg, borderRadius: 18, padding: 14, flexDirection: 'column', justifyContent: 'space-between' }}>
     <FlexWidget style={{ width: 'match_parent', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <TextWidget text="Closing Bell" style={{ fontSize: 14, fontFamily: 'Manrope_700Bold', color: colors.ink }} />
-      <TextWidget text="OVER XSTOCKS · $1K" style={{ fontSize: 9, fontFamily: 'Inter_700Bold', color: colors.gold, letterSpacing: 0.08 }} />
+      <TextWidget text="VS XSTOCKS · $1K" style={{ fontSize: 9, fontFamily: 'Inter_700Bold', color: colors.gold, letterSpacing: 0.08 }} />
     </FlexWidget>
     <FlexWidget style={{ width: 'match_parent', flexDirection: 'row', justifyContent: 'space-between' }}>
       {rows.map(row => {

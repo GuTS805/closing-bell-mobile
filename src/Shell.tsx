@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMobileWallet } from '@wallet-ui/react-native-web3js';
-import { Comparison, getComparison, getMarketSession, MarketClosedError, getPositions, getReserve, marketFor, markets, percent, RPC_URL, Ticker, usd } from './api';
+import { Comparison, gapWords, getComparison, getMarketSession, isUnder, MarketClosedError, getPositions, getReserve, marketFor, markets, percent, RPC_URL, Ticker, usd } from './api';
 import { Onboarding } from './Onboarding';
 import { ProtectCard } from './ProtectCard';
 import { ensureBackgroundSweep } from './background';
@@ -97,7 +97,7 @@ export function Shell() {
       {tab === 'Checks' && <><View style={s.hero}><Label>YOUR HISTORY</Label><Text style={s.title}>Saved checks.</Text><Copy>Snapshots saved on this phone. Prices move, so check again before you swap.</Copy></View>
         <AlertList />{error && <Notice message={error} />}{ready && checks.length === 0 && <Notice message="No checks saved yet. Choose a token, set a limit, and save the result here." />}
         {checks.map(check => <View key={check.id} style={s.card}><View style={s.row}><View><Label>{check.ticker} / ROUTE CHECK</Label><Text style={s.subtitle}>{usd(check.amount)}</Text></View><Pill title={check.outcome === 'within' ? 'WITHIN LIMIT' : 'OVER LIMIT'} tone={check.outcome === 'within' ? 'green' : 'red'} /></View>
-          <DataRow label="Over xStocks' price" value={percent(check.differenceBps)} hint={`Your limit ${(check.band / 100).toFixed(2)}%`} />
+          <DataRow label="Vs xStocks' price" value={percent(check.differenceBps)} hint={`Your limit ${(check.band / 100).toFixed(2)}%`} />
           <DataRow label="Jupiter's price" value={usd(check.tokenFillPrice)} /><DataRow label="xStocks' price" value={usd(check.issuerIndicativePrice)} />
           <Text style={s.faint}>CHECKED {time(check.checkedAt).toUpperCase()}</Text>
           <Button title={`Check ${check.ticker} again`} onPress={() => open(check.ticker, check)} /><Button secondary title="Remove saved check" onPress={() => { void removeCheck(check.id); }} />
@@ -124,10 +124,10 @@ function MarketRow({ ticker, watched, last, open }: { ticker: Ticker; watched: b
   const fill = query.data?.tokenFillPrice ?? closed?.tokenFillPrice ?? null;
   return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${market.name}`} onPress={open} style={({ pressed }) => [s.card, pressed && { borderColor: colors.gold }]}>
     <View style={s.row}><View style={s.badge}><Text style={[s.badgeText, { color: market.color }]}>{market.mark}</Text></View><View style={s.flex}><Text style={s.subtitle}>{ticker}</Text><Text style={s.faint}>{market.name} · {market.underlying} backing{watched ? ' · WATCHING' : ''}</Text></View><Text style={s.back}>↗</Text></View>
-    <View><View style={s.row}><Text style={[s.dataHint, s.flex]}>JUPITER PRICE FOR $1,000</Text><Pill title={closed ? 'MARKET CLOSED' : query.isError ? 'UNAVAILABLE' : query.data ? `${percent(query.data.differenceBps)} OVER` : 'READING'} tone={closed || (query.data && !query.data.issuerLive) ? 'muted' : query.isError ? 'red' : 'gold'} /></View><Text style={s.marketPrice} numberOfLines={1} adjustsFontSizeToFit>{fill !== null ? usd(fill) : query.isPending ? 'Reading…' : '—'}</Text></View>
+    <View><View style={s.row}><Text style={[s.dataHint, s.flex]}>JUPITER PRICE FOR $1,000</Text><Pill title={closed ? 'MARKET CLOSED' : query.isError ? 'UNAVAILABLE' : query.data ? gapWords(query.data.differenceBps).toUpperCase() : 'READING'} tone={closed || (query.data && !query.data.issuerLive) ? 'muted' : query.isError ? 'red' : query.data && isUnder(query.data.differenceBps) ? 'green' : 'gold'} /></View><Text style={s.marketPrice} numberOfLines={1} adjustsFontSizeToFit>{fill !== null ? usd(fill) : query.isPending ? 'Reading…' : '—'}</Text></View>
     <DataRow label="xStocks' price" value={query.data ? usd(query.data.issuerIndicativePrice) : closed ? 'Paused' : '—'} hint={query.data && !query.data.issuerLive ? `Last read ${time(query.data.issuerAt)}` : closed ? 'Resumes when the US market opens' : "The issuer's indicative price for the token"} />
-    <DataRow label="You'd pay over xStocks" value={query.data ? percent(query.data.differenceBps) : '—'} hint={query.data && !query.data.issuerLive ? "Jupiter now versus xStocks' last price" : "Jupiter price versus xStocks' price"} accent={!!query.data?.issuerLive} />
-    {query.data && <Text style={s.faint}>{query.data.issuerLive ? `CHECKED ${time(query.data.capturedAt).toUpperCase()} · XSTOCKS DOESN'T TIMESTAMP ITS PRICE` : 'US MARKET CLOSED · XSTOCKS HAS PAUSED ITS PRICE · USING THE LAST ONE THIS PHONE READ'}</Text>}
+    <DataRow label="Jupiter vs xStocks" value={query.data ? percent(query.data.differenceBps) : '—'} hint={query.data && !query.data.issuerLive ? "Jupiter now versus xStocks' last price" : "Jupiter price versus xStocks' price"} accent={!!query.data?.issuerLive} />
+    {query.data && <Text style={s.faint}>{query.data.issuerLive ? `CHECKED ${new Date(query.data.capturedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).toUpperCase()}` : 'US MARKET CLOSED · XSTOCKS HAS PAUSED ITS PRICE · USING THE LAST ONE THIS PHONE READ'}</Text>}
     {last && <Text style={s.faint}>YOUR LAST CHECK {new Date(last.checkedAt).toLocaleDateString()} · {last.outcome === 'within' ? 'WITHIN LIMIT' : 'OVER LIMIT'}</Text>}
     {closed && <Text style={s.faint}>US MARKET CLOSED · JUPITER STILL TRADES {ticker} · THE COMPARISON RETURNS WHEN XSTOCKS RESUMES ITS PRICE</Text>}
     {query.isError && !closed && <Text style={s.faint}>{query.error.message}</Text>}
@@ -168,7 +168,7 @@ function Stock({ ticker, previous, watched, toggle, back, save, viewChecks }: { 
     {review && quote.isError && <Notice message={quote.error.message} retry={() => void quote.refetch()} />}
     {result && outcome && <><View ref={resultCard} collapsable={false} style={[s.card, s.resultCard, outcome === 'above' && s.resultRed]}>
       <View style={s.row}><Label>02 / RESULT</Label><Pill title={outcome === 'above' ? 'OVER YOUR LIMIT' : 'WITHIN YOUR LIMIT'} tone={outcome === 'above' ? 'red' : 'green'} /></View>
-      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{percent(result.differenceBps)}</Text><Copy>{`You'd pay ${percent(result.differenceBps)} over xStocks' price for this swap. Your limit is ${(band / 100).toFixed(2)}%.`}</Copy>
+      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit>{percent(result.differenceBps)}</Text><Copy>{`You'd pay ${gapWords(result.differenceBps)} xStocks' price for this swap. Your limit is ${(band / 100).toFixed(2)}%.`}</Copy>
       <DataRow label="Jupiter's price for you" value={usd(result.tokenFillPrice)} hint={result.venues.length ? `Route via ${result.venues.join(', ')}` : `Solana slot ${result.routeSlot}`} />
       <DataRow label="xStocks' price" value={usd(result.issuerIndicativePrice)} hint={result.issuerLive ? "Indicative; xStocks doesn't timestamp it" : `Last read ${time(result.issuerAt)} · paused while the US market is closed`} />
       <DataRow label="Your limit price" value={usd(result.issuerIndicativePrice * (1 + band / 10_000))} hint={`xStocks' price + ${(band / 100).toFixed(2)}%`} accent />
@@ -206,6 +206,7 @@ function BackingRow({ ticker }: { ticker: Ticker }) {
     {query.isError && <Notice message={query.error.message} retry={() => void query.refetch()} />}
     {query.data && <><DataRow label="Shares reported held" value={Number(query.data.sharesHeld).toLocaleString('en-US')} /><DataRow label="Token supply reported" value={Number(query.data.circulatingSupply).toLocaleString('en-US', { maximumFractionDigits: 3 })} />
       <Text style={s.faint}>ISSUER RECORD {time(query.data.timestamp).toUpperCase()} · {ageLabel(query.data.timestamp).toUpperCase()}</Text>
+      {query.data.saved && <Text style={s.faint}>{"COULDN'T REACH XSTOCKS · SHOWING THE COPY SAVED ON THIS PHONE"}</Text>}
       <Copy>Custodian: {query.data.holdings.map(h => h.provider).join(', ') || 'not specified'}. Counts may require the issuer's multiplier to compare directly.</Copy></>}
     <Button secondary title="View token mint on Solscan" onPress={() => open(`https://solscan.io/token/${market.mint}`)} />
     <Button secondary title="View issuer reserve source" onPress={() => open(`https://api.xstocks.fi/api/v2/public/proof-of-reserves/${ticker}`)} />

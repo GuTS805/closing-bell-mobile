@@ -14,6 +14,15 @@ On the phone, v0.2.0 showed every market as `UNAVAILABLE` with `xStocks returned
 | Layout | The protect card's `ON-CHAIN` pill no longer overflows; reserve age reads `14 MIN OLD` instead of `14M OLD`. |
 | Stability | No ReactNativeJS or AndroidRuntime errors; 10 unit tests pass; the APK verifies with the release certificate. |
 
+Evening pass on the phone, US extended hours with live xStocks prices:
+
+| Area | Result |
+| --- | --- |
+| Markets | All four tokens live. A negative gap now reads `0.05% UNDER` in green (TSLAx) instead of `-0.08% OVER`; sentences drop the redundant `+` (`You'd pay 0.61% over xStocks' price`). |
+| Check, save, share | SPYx $100 at 0.10%: over the limit, `DON'T SWAP YET`, existing alert shown; save added it to Checks; share opened the Android share sheet. |
+| History | 155 background samples since October 9 for SPYx, +0.56% to +0.79%. |
+| Backing | NVDAx and TSLAx reserve reads once timed out on the phone while the endpoint answered in under 2 s from a PC. The last good record is now kept on the phone and shown, dated, if xStocks can't be reached. |
+
 ## October 9 v0.2.0 pass: protect, alerts, history, widget, share
 
 Physical phone: Android 13 arm64 (model IV2201). Emulator: Android 16 Google APIs x86_64, headless. Screenshots are local in `artifacts/qa/phone/` and `artifacts/qa/oct9/` (ignored by Git); screens of the phone's personal home pages were deleted and are not part of the record.
